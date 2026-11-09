@@ -19,7 +19,7 @@
 - [ ] **A-4 画像の権利**
   - [ ] プレビュー・ストア画像に使っている「雨の夜の街」の画像は、画像生成AIで作ったもの。その生成サービスの利用規約が、公開・商用利用を許しているか確認する（不安なら自分で撮った写真やイラストに差し替える）
 - [ ] **A-5 同梱ソフトのライセンス**: すべて同梱済み（`NOTICE.txt`、`licenses/`）。WebAssembly の作り方は jammaru/sakutto（MIT）の手順とパッチを使っているので、その表記も入れてある
-- [ ] **A-6 プライバシーポリシー**: `store/privacy-policy.md` の連絡先を自分のものに書き換え、**誰でも見られる URL** で公開する（GitHub Pages、Notion の公開ページ、Gist など）
+- [x] **A-6 プライバシーポリシー**: GitHub Pages で公開済み → **https://shotaymzk.github.io/dual-subs-ja/privacy.html**（連絡先は GitHub の Issues）。ダッシュボードの「プライバシーポリシーの URL」にこれを入れる
 
 ## B. 実機で確認すること（私は Prime Video に入れないため未確認）
 
@@ -48,7 +48,7 @@ https://chrome.google.com/webstore/devconsole
    - [ ] ストアアイコン 128×128（zip の中の `icons/icon128.png` が使われる）
    - [ ] スクリーンショット（1280×800・最大5枚）: `store/images/screenshot-*.png`
    - [ ] 小さいプロモーション画像 440×280: `store/images/promo-small-440x280.png`
-   - [ ] プライバシーポリシーの URL（A-6 で公開したもの）
+   - [ ] プライバシーポリシーの URL: `https://shotaymzk.github.io/dual-subs-ja/privacy.html`
 4. [ ] **プライバシー**タブ: `store/permissions-and-privacy-answers.md` を貼り付け（単一の目的・各権限の理由・リモートコード「いいえ」・データ区分と3つの証明）
 5. [ ] **配布**タブ: 料金「無料」／公開範囲は、最初は「限定公開（リンクを知る人のみ）」か「テスター」で試し、問題なければ「一般公開」へ／地域は全世界（または日本）
 6. [ ] **テスト手順**: 同ファイル末尾の文面とデモ動画の URL を貼る（審査員は Prime Video に入れない可能性が高い。画面録画を YouTube の限定公開などで用意）

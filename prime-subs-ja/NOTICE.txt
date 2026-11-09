@@ -1,0 +1,20 @@
+Dual Subs JA (PLaMo)
+Unofficial. Not affiliated with Preferred Networks, Inc. or Amazon. Built with PLaMo.
+
+Translation model
+  PLaMo 3 Translate (c) Preferred Networks, Inc., provided under the PLaMo Community License.
+  The model weights are NOT included in this package; they are downloaded by the user from
+  Hugging Face (huggingface.co/pfnet) on first use. A copy of the license is in
+  licenses/PLaMo-Community-License-en.txt and licenses/PLaMo-Community-License-ja.txt.
+  Official text: https://plamo.preferredai.jp/info/plamo-community-license-en
+
+Bundled third-party software (vendor/wllama/)
+  wllama   - MIT License - Copyright (c) 2024 Xuan Son NGUYEN     licenses/wllama-LICENSE.txt
+  llama.cpp - MIT License - Copyright (c) 2023-2026 The ggml authors  licenses/llama.cpp-LICENSE.txt
+  Emscripten runtime - MIT / University of Illinois-NCSA            licenses/emscripten-LICENSE.txt
+  Dawn emdawnwebgpu JavaScript library - BSD-3-Clause               licenses/dawn-LICENSE.txt
+
+Build recipe
+  The WebAssembly runtime was built with the pinned-source build scripts and patches published in
+  jammaru/sakutto (MIT License, Copyright (c) 2026 jammaru): licenses/sakutto-build-recipe-LICENSE.txt
+  Provenance of the built files: vendor/wllama/wllama-build.json

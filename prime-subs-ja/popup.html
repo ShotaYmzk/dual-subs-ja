@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>body{width:310px;margin:0;padding:14px 16px 16px;background:var(--surface)}
+.p{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.p small{display:block;color:var(--sub);font-size:12px;line-height:1.4}
+#st{margin-top:8px;color:var(--sub);font-size:12.5px;word-break:break-all}.top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.top b{font:700 16px var(--mincho)}
+.eng{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.eng .h{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:#9aa1af;flex:none}
+.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad)}.dot.busy{background:#ff9f43;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.eng .t{font-weight:600;flex:1}
+.eng .d{margin-top:4px;color:var(--sub);font-size:12px;line-height:1.5;word-break:break-all}
+.eng button{padding:4px 12px;font-size:13px}
+@media (prefers-reduced-motion:reduce){.dot.busy{animation:none}}</style></head><body>
+<div class="top"><b>Dual Subs JA</b><label class="sw"><input type="checkbox" id="enabled" aria-label="有効"><i></i></label></div>
+
+<div class="eng" id="eng">
+  <div class="h"><span class="dot" id="dot"></span><span class="t" id="engTitle">確認中…</span><button class="act" id="engBtn" hidden></button></div>
+  <div class="d" id="engDetail"></div>
+</div>
+
+<div class="p"><span>英語を表示</span><label class="sw"><input type="checkbox" id="showEn"><i></i></label></div>
+<div class="p"><span>日本語を表示</span><label class="sw"><input type="checkbox" id="showJa"><i></i></label></div>
+<div class="p"><span>セリフごとに止める<small>キー P</small></span><label class="sw"><input type="checkbox" id="autoPause"><i></i></label></div>
+<div class="p"><span>単語で止める</span><label class="sw"><input type="checkbox" id="hoverPause"><i></i></label></div>
+<div class="p"><span>Prime の字幕を隠す</span><label class="sw"><input type="checkbox" id="hideNative"><i></i></label></div>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="act" id="test">試しに訳す</button><button class="act" id="opt">詳しい設定</button></div>
+<div id="st"></div>
+<div style="margin-top:10px;color:var(--sub);font-size:11.5px">訳は PLaMo 3 Translate による機械翻訳です。Built with PLaMo.</div>
+<script src="store.js"></script><script src="popup.js"></script></body></html>

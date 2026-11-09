@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>設定 - Dual Subs JA</title><link rel="stylesheet" href="ui.css"></head><body>
+<div class="shell">
+<nav class="side">
+  <p class="brand">Dual Subs JA<small>Prime Video の英語字幕に、日本語をそっと添える拡張です。</small></p>
+  <ul>
+    <li><a href="#look">見た目</a></li><li><a href="#study">学習</a></li><li><a href="#translate">翻訳</a></li>
+    <li><a href="#sec-models">モデル</a></li><li><a href="#engine">実行環境</a></li><li><a href="#status">状態</a></li><li><a href="#about">プライバシーと権利</a></li>
+  </ul>
+</nav>
+<main>
+  <h1>字幕の設定</h1>
+  <p class="lead">変更はその場で保存され、下の画面にも反映されます。</p>
+  <div class="stage"><div class="screen" id="screen" aria-label="プレビュー">
+    <div class="pic"><span class="tag">プレビュー</span></div>
+    <div class="cap"><div class="en" id="pvEn">I'll take a rain check.</div><div class="ja" id="pvJa">また今度にさせてもらうよ。</div></div>
+    <div class="native" id="pvNative">Prime の元の字幕もここに出ています</div>
+  </div></div>
+
+  <h2 id="look">見た目</h2>
+  <p class="hint">字幕をどう並べるか。</p>
+  <div class="group">
+    <div class="set"><div class="l"><b>表示する言語</b><span>英語と日本語を上下に並べる「対訳」がおすすめです。</span></div>
+      <div class="seg" data-key="dispMode"><button data-v="both">対訳</button><button data-v="ja">日本語のみ</button><button data-v="en">英語のみ</button></div></div>
+    <div class="set"><div class="l"><b>字幕を出す場所</b><span>「重ねる」は映像の上、「画面の下」は映像を少し縮めて下の帯に出します。</span></div>
+      <div class="seg" data-key="subPos"><button data-v="overlay">映像に重ねる</button><button data-v="below">画面の下</button></div></div>
+    <div class="set"><div class="l"><b>日本語の大きさ</b><span>英語はその約85%で表示します。</span></div>
+      <div class="rng"><input type="range" id="fontSize" min="16" max="56" step="1" aria-label="日本語の大きさ"><output id="fontOut"></output></div></div>
+    <div class="set"><div class="l"><b>Prime の字幕を隠す</b><span>重なって見づらいときにオンにします。</span></div>
+      <label class="sw"><input type="checkbox" id="hideNative" aria-label="Prime の字幕を隠す"><i></i></label></div>
+    <div class="set"><div class="l"><b>タイミングの補正</b><span>日本語が早く出るなら＋、遅いならーに。</span></div>
+      <div class="stepper"><button data-step="-0.1" aria-label="0.1秒遅らせる">−</button><output id="offsetOut"></output><button data-step="0.1" aria-label="0.1秒早める">＋</button></div></div>
+  </div>
+
+  <h2 id="study">学習</h2>
+  <p class="hint">英語を聞き取りたいとき向けの機能です。</p>
+  <div class="group">
+    <div class="set"><div class="l"><b>セリフごとに止める</b><span>1つのセリフが終わるたびに一時停止します。</span></div>
+      <label class="sw"><input type="checkbox" id="autoPause" aria-label="セリフごとに止める"><i></i></label></div>
+    <div class="set"><div class="l"><b>単語にポインタを乗せたら止める</b><span>訳を読む間、動画を止めます。外すと再開します。</span></div>
+      <label class="sw"><input type="checkbox" id="hoverPause" aria-label="単語にポインタを乗せたら止める"><i></i></label></div>
+    <div class="set"><div class="l"><b>キーボード操作</b><span>再生画面で使えます。</span></div>
+      <div class="r"><kbd>A</kbd>前 <kbd>S</kbd>もう一度 <kbd>D</kbd>次 <kbd>P</kbd>自動停止 <kbd>T</kbd>一覧</div></div>
+  </div>
+
+  <h2 id="translate">翻訳</h2>
+  <p class="hint">訳文の書き方を決めます。</p>
+  <div class="group">
+    <div class="set"><div class="l"><b>この拡張を使う</b><span>オフにすると、Prime はいつもの表示に戻ります。</span></div>
+      <label class="sw"><input type="checkbox" id="enabled" aria-label="この拡張を使う"><i></i></label></div>
+    <div class="set"><div class="l"><b>訳文の口調</b></div>
+      <div class="seg" data-key="form"><button data-v="plain">だ・である</button><button data-v="polite">です・ます</button><button data-v="">おまかせ</button></div></div>
+    <div class="set col"><div class="l"><b>固有名詞の訳を固定する</b><span>1行に「英語,日本語」の形で書きます。登場人物や作中用語に便利です。単語にポインタを乗せたときの訳には使いません。</span></div>
+      <textarea id="glossary" placeholder="Wednesday,ウェンズデー&#10;Nevermore,ネヴァーモア" style="margin-top:10px"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px"><button class="act" id="csvIn">CSVから取り込む</button><button class="act" id="csvOut">CSVに保存</button><input type="file" id="csvFile" accept=".csv,.txt" hidden></div></div>
+  </div>
+
+  <h2 id="sec-models">モデル</h2>
+  <p class="hint">翻訳に使う PLaMo 3 Translate の重みです。大きいほど訳は安定しますが、重くなります。</p>
+  <div class="group" id="models"></div>
+  <div id="modelErr" class="hint"></div>
+
+  <h2 id="engine">実行環境</h2>
+  <p class="hint">翻訳をどこで動かすか。ふつうは変えなくて大丈夫です。</p>
+  <div class="group">
+    <div class="set"><div class="l"><b>動かす場所</b><span>「ブラウザ内」なら、追加のインストールは要りません。</span></div>
+      <div class="seg" data-key="engine"><button data-v="browser">ブラウザ内</button><button data-v="ollama">Ollama</button></div></div>
+    <div class="set" id="rowMode"><div class="l"><b>処理の割り当て</b><span>「おまかせ」は、使えるなら GPU を使います。</span></div>
+      <div class="seg" data-key="mode"><button data-v="auto">おまかせ</button><button data-v="webgpu">GPU</button><button data-v="cpu8">CPU 8</button><button data-v="cpu4">CPU 4</button></div></div>
+    <div class="set col" id="rowEndpoint"><div class="l"><b>Ollama のアドレス</b></div><input type="text" id="endpoint" style="margin-top:8px"></div>
+    <div class="set"><div class="l"><b>使わないときにモデルを手放すまで</b><span>メモリを空けたいときは短めに。</span></div>
+      <div class="seg" data-key="keepAlive"><button data-v="1m">1分</button><button data-v="5m">5分</button><button data-v="15m">15分</button><button data-v="-1">手放さない</button></div></div>
+    <div class="set"><div class="l"><b>いますぐメモリから外す</b></div><button class="act" id="unload">外す</button></div>
+  </div>
+
+  <h2 id="status">状態</h2>
+  <p class="hint">いま実際に何で動いているか。</p>
+  <div class="group">
+    <dl class="kv">
+      <dt>処理の担当</dt><dd id="dBackend">…</dd>
+      <dt>実行環境</dt><dd id="dVer">…</dd>
+      <dt>スレッド数</dt><dd id="dThreads">…</dd>
+      <dt>読み込み中</dt><dd id="dLoaded">…</dd>
+      <dt>GPU と分離</dt><dd id="dProc">…</dd>
+      </dl>
+    <div class="actions"><button class="act" id="refresh">更新</button><button class="pri" id="warm">モデルを読み込む</button><button class="pri" id="benchSuite">翻訳の速さを測る</button><button class="act" id="reopen">最初の案内をもう一度見る</button></div>
+  </div>
+
+  <div class="group" id="benchBox" hidden>
+    <div class="set col"><div class="l"><b>翻訳の速さ</b><span id="benchSub">実際の字幕に近い、長さの違う4つの英文を訳して測ります。</span></div>
+      <div id="benchSummary" class="bsum"></div><div id="benchRows"></div></div>
+  </div>
+
+  <h2 id="about">プライバシーと権利</h2>
+  <div class="group"><div class="set col"><div class="l"><b>字幕はこのPCから出ません</b><span>翻訳は、ブラウザの中（上級設定で選んだ場合は手元の Ollama）だけで行います。字幕を外部のサーバーへ送ることも、利用状況を集めることもありません。この拡張が自分から通信するのは、モデルの取得先（huggingface.co と、そこから案内される配信用サーバー）だけです。</span></div></div></div>
+  <div class="group license"><div class="set col"><div class="l"><b>モデルのライセンス</b><span>モデルは Preferred Networks の PLaMo 3 Translate です。この拡張にモデルの重みは入っていません。</span></div>
+    <dl style="margin-top:12px"><dt>個人・学術</dt><dd>登録なしで使えます。</dd><dt>仕事・商用</dt><dd>PFNへの事前登録が必要で、利用者（関係会社を含む）の直近年度の売上・収入が10億円以下であることが条件です。</dd><dt>条件に当てはまらない</dt><dd>PFNと個別にライセンス契約を結びます。</dd></dl>
+    <p style="margin:12px 0 0;font-size:13.5px"><a href="https://plamo.preferredai.jp/info/plamo-community-license-ja" target="_blank">ライセンス全文（日本語）</a> ／ <a href="https://plamo.preferredai.jp/info/plamo-community-license-en" target="_blank">English</a> ／ <a href="https://forms.gle/mTL8tBLrMYXKNZD56" target="_blank">商用利用の登録</a></p></div></div>
+  <p class="fine">訳文は機械翻訳です。非公式の拡張で、Preferred Networks とは関係ありません。Built with PLaMo.</p>
+</main></div>
+<script src="store.js"></script><script src="ui.js"></script><script src="options.js"></script></body></html>

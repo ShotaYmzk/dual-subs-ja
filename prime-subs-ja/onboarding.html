@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>はじめに - Dual Subs JA</title><link rel="stylesheet" href="ui.css"></head><body>
+<div class="wrap">
+  <p class="brand">Dual Subs JA</p>
+  <h1>英語のドラマを、英語のまま楽しむために。</h1>
+  <p class="lead">Prime Video の英語字幕の下に、日本語をそっと添えます。翻訳はこのPCの中で行うので、字幕は外へ出ません。</p>
+  <div class="screen" style="margin:18px 0 34px" aria-hidden="true">
+    <div class="pic"><span class="tag">こんなふうに表示されます</span></div>
+    <div class="cap"><div class="en" style="font-size:18px">I'll take a rain check.</div><div class="ja" style="font-size:21px">また今度にさせてもらうよ。</div></div>
+  </div>
+
+  <ol class="steps">
+    <li data-n="1">
+      <h2>翻訳モデルを手元に置く</h2>
+      <p class="hint">一度だけ取得します。取得したモデルはこのブラウザに保存されるので、あとは何も入れずに使えます。<b>終わるまでこのタブを開いたままにしてください。</b></p>
+      <div id="models"></div>
+      <div class="card" id="envcard"><span id="envmsg">この PC を調べています…</span></div>
+    </li>
+    <li data-n="2">
+      <h2>動くか確かめる</h2>
+      <p class="hint">短い一文を訳してみます。最初の1回だけ、モデルの読み込みに数秒かかります。</p>
+      <button class="act" id="test">試しに訳す</button> <span id="testOut" class="hint"></span>
+    </li>
+    <li data-n="3">
+      <h2>Prime Video で観る</h2>
+      <ul class="tips">
+        <li>字幕を<b>英語</b>にして再生します。</li>
+        <li>画面右上に <b>JA</b> ボタンが出たら準備完了です。押すと、セリフの一覧が開きます。</li>
+        <li>英単語にポインタを乗せると、その意味が出ます。</li>
+        <li><kbd>A</kbd>前のセリフ <kbd>S</kbd>もう一度 <kbd>D</kbd>次のセリフ <kbd>P</kbd>自動停止 <kbd>T</kbd>一覧</li>
+      </ul>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="pri" id="open">Prime Video を開く</button><button class="act" id="settings">設定を開く</button><button class="act" id="close">閉じる</button></div>
+    </li>
+  </ol>
+
+  <details class="card" id="adv"><summary>すでに Ollama を使っている方へ</summary>
+    <p class="hint" style="margin-top:10px">ブラウザ内の代わりに Ollama で翻訳させることもできます。切り替えは、設定の「実行環境」からいつでもできます。</p>
+    <button class="act" id="useOllama">Ollama に切り替える</button> <span class="hint" id="ollamaMsg"></span></details>
+  <p class="fine">訳文は機械翻訳です。モデルは PLaMo 3 Translate（個人・学術は登録なし、仕事・商用は PFN への登録が必要。詳しくは設定の「プライバシーと権利」）。非公式の拡張で、Preferred Networks とは関係ありません。Built with PLaMo.</p>
+</div>
+<script src="store.js"></script><script src="ui.js"></script><script src="onboarding.js"></script></body></html>

@@ -1,0 +1,8 @@
+{
+  "appName": {
+    "message": "Dual Subs JA (PLaMo)"
+  },
+  "appDesc": {
+    "message": "Prime Videoの英語字幕を先読みして日本語に翻訳し、対訳で表示。翻訳はPC内で完結し、字幕は外部に送信されません。"
+  }
+}

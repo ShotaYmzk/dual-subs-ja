@@ -118,22 +118,35 @@
     async download(key, onProgress, signal) {
       const m = find(key), d = await dir();
       await this.remove(key);
-      const res = await fetch(m.url, { signal });
-      if (!res.ok || !res.body) throw new Error("ダウンロードに失敗しました (HTTP " + res.status + ")");
       const fh = await d.getFileHandle(m.file, { create: true });
       const w = await fh.createWritable();
       const sha = new Sha256();
       const t0 = performance.now();
-      let done = 0;
+      let done = 0, attempt = 0;
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       try {
-        const reader = res.body.getReader();
-        for (;;) {
-          const { done: end, value } = await reader.read();
-          if (end) break;
-          sha.update(value);           // hash as we go: no second pass over the file
-          await w.write(value);
-          done += value.length;
-          onProgress && onProgress({ phase: "download", completed: done, total: m.size, bytesPerSec: done / Math.max(0.5, (performance.now() - t0) / 1000) });
+        // The file is large, so a dropped connection must not mean starting over: resume with a Range request
+        // from the byte where it stopped (the hash and the output file simply continue).
+        while (done < m.size) {
+          try {
+            const res = await fetch(m.url, { signal, headers: done ? { Range: "bytes=" + done + "-" } : {} });
+            if (!res.ok || !res.body) throw new Error("ダウンロードに失敗しました (HTTP " + res.status + ")");
+            if (done && res.status !== 206) throw new Error("途中からの再開に対応していません (HTTP " + res.status + ")");
+            const reader = res.body.getReader();
+            for (;;) {
+              const { done: end, value } = await reader.read();
+              if (end) break;
+              sha.update(value);           // hash as we go: no second pass over the file
+              await w.write(value);
+              done += value.length;
+              attempt = 0;
+              onProgress && onProgress({ phase: "download", completed: done, total: m.size, bytesPerSec: done / Math.max(0.5, (performance.now() - t0) / 1000) });
+            }
+          } catch (e) {
+            if ((signal && signal.aborted) || ++attempt > 8) throw e;
+            onProgress && onProgress({ phase: "retry", completed: done, total: m.size, bytesPerSec: 0 });
+            await sleep(Math.min(8000, 800 * attempt));
+          }
         }
         await w.close();
       } catch (e) {

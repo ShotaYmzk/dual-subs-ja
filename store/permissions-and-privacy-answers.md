@@ -1,7 +1,7 @@
 # ダッシュボードの「プライバシー」タブに貼り付ける回答
 
 ## 単一の目的（Single purpose）
-Prime Video の字幕テキストを翻訳し、動画の上または下に対訳として表示する。
+動画サービス（Prime Video・Netflix・YouTube）の字幕テキストを翻訳し、動画の上または下に対訳として表示する。
 
 ## 権限の使用理由（Permission justification）
 
@@ -15,11 +15,12 @@ Prime Video の字幕テキストを翻訳し、動画の上または下に対�
 | ホスト | 説明 |
 |---|---|
 | https://*.primevideo.com/*, https://*.amazon.co.jp/gp/video/*, https://*.amazon.com/gp/video/*（および `/-/*/gp/video/*`） | Prime Video のプレイヤーが読み込む字幕ファイルを読み取り、翻訳を重ねて表示するため（コンテンツスクリプト）。上記以外のページでは動作しない。 |
+| https://*.netflix.com/*, https://www.youtube.com/* | Netflix・YouTube の動画ページで、プレイヤーが読み込む字幕データを読み取り、翻訳を重ねて表示するため（コンテンツスクリプト）。これらのサービスは動画ページへ画面遷移なしで移動するため、サイト全体にスクリプトを置かないと字幕を取り逃がす。 |
 | https://huggingface.co/*, https://*.huggingface.co/*, https://*.hf.co/* | 翻訳モデル（GGUF）を Hugging Face から取得するため。取得時に配信用サーバーへ転送される。 |
 | http://localhost:11434/*, http://127.0.0.1:11434/* | 任意機能。ユーザーが自分の PC で動かしている Ollama に翻訳を依頼するため。 |
 
 ## その他の技術的な説明（質問された場合）
-- **MAIN world のスクリプト（hook.js）**: プレイヤーが字幕ファイルを取得する fetch / XMLHttpRequest の応答を読むために、ページ側で応答を観察する。読み取った字幕テキストは拡張内でのみ使い、外部へ送らない。
+- **MAIN world のスクリプト（hook.js）**: プレイヤーが字幕ファイルを取得する fetch / XMLHttpRequest の応答を読むために、ページ側で応答を観察する。Netflix では、再生情報（マニフェスト）から字幕の場所を知るために `JSON.parse` / `JSON.stringify` を一時的に包み、再生情報の要求に WebVTT 形式と全字幕トラックの取得を加える。YouTube では、プレイヤーの公開 API（`setOption("captions", …)`）で字幕トラックを選び、その応答を読む。読み取った字幕テキストは拡張内でのみ使い、外部へ送らない。
 - **CSP の `wasm-unsafe-eval`**: WebAssembly（llama.cpp）を実行するために必要。`eval` や `new Function` は使っていない。
 - **cross_origin_embedder_policy / cross_origin_opener_policy**: WebAssembly のマルチスレッド（SharedArrayBuffer）に必要。拡張のページにだけ適用される。
 

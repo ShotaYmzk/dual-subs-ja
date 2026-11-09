@@ -1,5 +1,5 @@
 let S = {};
-const TOGGLES = ["enabled", "hideNative", "autoPause", "hoverPause"];
+const TOGGLES = ["enabled", "hideNative", "autoPause", "hoverPause", "ytAutoCaptions"];
 const BROWSER_OK = (m) => m.browser;
 const RELOAD_KEYS = ["endpoint", "keepAlive", "engine", "mode"];
 

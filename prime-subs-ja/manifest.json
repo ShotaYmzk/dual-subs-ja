@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "__MSG_appDesc__",
   "permissions": [
     "declarativeNetRequest",
@@ -34,7 +34,9 @@
         "*://*.amazon.co.jp/gp/video/*",
         "*://*.amazon.co.jp/-/*/gp/video/*",
         "*://*.amazon.com/gp/video/*",
-        "*://*.amazon.com/-/*/gp/video/*"
+        "*://*.amazon.com/-/*/gp/video/*",
+        "*://*.netflix.com/*",
+        "*://www.youtube.com/*"
       ],
       "js": [
         "hook.js"
@@ -48,7 +50,9 @@
         "*://*.amazon.co.jp/gp/video/*",
         "*://*.amazon.co.jp/-/*/gp/video/*",
         "*://*.amazon.com/gp/video/*",
-        "*://*.amazon.com/-/*/gp/video/*"
+        "*://*.amazon.com/-/*/gp/video/*",
+        "*://*.netflix.com/*",
+        "*://www.youtube.com/*"
       ],
       "js": [
         "ttml.js",

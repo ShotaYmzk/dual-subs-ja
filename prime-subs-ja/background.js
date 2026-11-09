@@ -6,6 +6,7 @@ const DEFAULTS = {
   showJa: true,
   autoPause: false,
   hoverPause: true,
+  ytAutoCaptions: true,
   offset: 0,
   fontSize: 28,
   form: "plain", // "plain" | "polite" | ""

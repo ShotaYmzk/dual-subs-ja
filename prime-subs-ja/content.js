@@ -1,8 +1,37 @@
 (() => {
   const TAG = "primesubs-ja";
+  // ---------- per-site differences ----------
+  const HOST = location.hostname;
+  const SITES = {
+    prime: {
+      name: "prime", playerSel: ".atvwebplayersdk-player-container", zone: "top",
+      capSel: "", capLabel: /字幕|subtitle|caption|closed/i,
+      nativeHide: '[class*="atvwebplayersdk-captions"],[class*="atvwebplayersdk-subtitle"]',
+      nativeText: ".atvwebplayersdk-captions-text", shrink: true,
+      pageKey: () => location.pathname, adShowing: () => false
+    },
+    netflix: {
+      name: "netflix", playerSel: ".watch-video--player-view,.NFPlayer,[data-uia='video-canvas']", zone: "bottom",
+      capSel: "[data-uia='control-audio-subtitle']", capLabel: /音声と字幕|字幕|audio ?(&|and) ?subtitles|subtitles/i,
+      nativeHide: ".player-timedtext,.player-timedtext-text-container",
+      nativeText: ".player-timedtext-text-container", shrink: false,
+      pageKey: () => location.pathname, adShowing: () => false
+    },
+    youtube: {
+      name: "youtube", playerSel: "#movie_player", zone: "bottom",
+      capSel: ".ytp-subtitles-button", capLabel: /字幕|subtitles|closed captions|captions/i,
+      nativeHide: ".ytp-caption-window-container",
+      nativeText: ".ytp-caption-segment", shrink: false,
+      pageKey: () => new URLSearchParams(location.search).get("v") || location.pathname,
+      adShowing: () => { const p = document.getElementById("movie_player"); return !!(p && p.classList.contains("ad-showing")); }
+    }
+  };
+  const SITE = /(^|\.)netflix\.com$/.test(HOST) ? SITES.netflix : /(^|\.)youtube\.com$/.test(HOST) ? SITES.youtube : SITES.prime;
+  const playerEl = () => document.querySelector(SITE.playerSel);
+
   const S = {
     enabled: true, hideNative: true, showEn: true, showJa: true,
-    autoPause: false, hoverPause: true, offset: 0, fontSize: 28,
+    autoPause: false, hoverPause: true, offset: 0, fontSize: 28, ytAutoCaptions: true,
     subPos: "overlay" // "overlay" (on the picture) | "below" (bar under a shrunken picture)
   };
   let cues = [];          // source-language cues [{begin,end,text}]
@@ -20,10 +49,12 @@
   let lastMouse = 0;
 
   // ---------- settings ----------
-  chrome.storage.sync.get(S).then((v) => { Object.assign(S, v); applySettings(); });
+  const pushCfg = () => window.postMessage({ source: TAG + "-cfg", cfg: { ytAutoCaptions: S.ytAutoCaptions } }, "*");
+  chrome.storage.sync.get(S).then((v) => { Object.assign(S, v); applySettings(); pushCfg(); });
   chrome.storage.onChanged.addListener((ch) => {
     for (const k in ch) if (k in S) S[k] = ch[k].newValue;
     applySettings();
+    if ("ytAutoCaptions" in ch) pushCfg();
   });
 
   // ---------- language handling ----------
@@ -52,20 +83,24 @@
     if (e.source !== window || !e.data || e.data.source !== TAG) return;
     const d = e.data;
     if (d.type === "stat") { hookStats = d.stats; return; }
-    if (d.type !== "ttml" && d.type !== "vtt") return;
+    if (d.type !== "ttml" && d.type !== "vtt" && d.type !== "yt") return;
     const T = globalThis.PrimeSubsTTML;
-    const parsed = d.type === "vtt" ? T.parseVtt(d.text) : T.parse(d.text);
+    const parsed = d.type === "vtt" ? T.parseVtt(d.text) : d.type === "yt" ? T.parseYouTube(d.text) : T.parse(d.text);
+    if (d.lang && !parsed.lang) parsed.lang = d.lang;
     if (!parsed.cues.length) return;
     // A tiny file next to a full one is a forced-narrative track (foreign-language lines only).
     if (cues.length > 100 && parsed.cues.length < cues.length * 0.25) return;
-    const key = parsed.cues.length + ":" + parsed.cues[0].begin + ":" + parsed.cues[parsed.cues.length - 1].end;
+    // identity of a subtitle track: size, timing AND wording (two languages can share the exact same timing)
+    const sample = parsed.cues.slice(0, 6).concat(parsed.cues.slice(-3)).map((c) => c.text).join("|");
+    let hash = 0; for (let k = 0; k < sample.length; k++) hash = (hash * 31 + sample.charCodeAt(k)) | 0;
+    const key = parsed.cues.length + ":" + parsed.cues[0].begin + ":" + parsed.cues[parsed.cues.length - 1].end + ":" + hash;
     if (key === cueKey) return;
     cueKey = key;
     cues = parsed.cues;
     srcLang = detectLang(parsed.lang, cues);
     tr = new Array(cues.length).fill(null);
     runId++;
-    cueVideo = findVideo(); cuePath = location.pathname;
+    cueVideo = findVideo(); cuePath = SITE.pageKey();
     console.log(`[primesubs-ja] loaded ${cues.length} ${srcLang} cues (${d.type})`);
     buildPanelRows();
     applySettings();
@@ -137,7 +172,7 @@
   }
   // the playing <video>, only while Prime's player UI is on the page
   function playerVideo() {
-    if (!document.querySelector(".atvwebplayersdk-player-container")) return null;
+    if (!playerEl()) return null;
     if (cueVideo && isShown(cueVideo)) return cueVideo;
     const v = findVideo();
     return v && isShown(v) ? v : null;
@@ -159,12 +194,12 @@
   const CSS = `
     :host{all:initial}
     *{box-sizing:border-box;font-family:'Hiragino Sans','Yu Gothic',-apple-system,sans-serif}
-    .sub{position:fixed;left:50%;transform:translateX(-50%);bottom:14%;max-width:78vw;text-align:center;
+    .sub{position:absolute;left:50%;transform:translateX(-50%);bottom:14%;max-width:78%;text-align:center;
       pointer-events:auto;z-index:2;padding:6px 14px;border-radius:8px;background:rgba(0,0,0,.45);
       color:#fff;text-shadow:0 0 3px #000;line-height:1.4;display:none}
     .sub.open{transform:translateX(-50%) translateX(-170px)}
     .sub.below{left:0;right:0;bottom:0;transform:none;max-width:none;width:100%;border-radius:0;background:#000;
-      height:18vh;display:none;flex-direction:column;justify-content:center;padding:6px 24px;transition:bottom .18s}
+      height:18%;display:none;flex-direction:column;justify-content:center;padding:6px 24px;transition:bottom .18s}
     .sub.below.lift{bottom:150px}
     .sub.below.open{right:340px;width:auto}
     .en{font-weight:600;white-space:pre-line}
@@ -175,7 +210,7 @@
       padding:8px 12px;font-size:15px;line-height:1.5;pointer-events:none;display:none;max-width:320px;
       box-shadow:0 4px 18px rgba(0,0,0,.6)}
     .tip b{color:#c9b8ff}.tip .ph{margin-top:4px;color:#ddd;font-size:13px}
-    .panel{position:fixed;top:0;right:0;bottom:0;width:340px;z-index:3;background:rgba(18,18,26,.94);
+    .panel{position:absolute;top:0;right:0;bottom:0;width:340px;z-index:3;background:rgba(18,18,26,.94);
       color:#eee;display:none;flex-direction:column;pointer-events:auto;border-left:1px solid #333}
     .panel.open{display:flex}
     .ph0{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #333;font-size:13px}
@@ -198,7 +233,7 @@
     if (!host) {
       host = document.createElement("div");
       host.id = "primesubs-ja-host";
-      host.style.cssText = "all:initial;position:fixed;inset:0;z-index:2147483647;pointer-events:none";
+      host.style.cssText = "all:initial;position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2147483647;pointer-events:none;overflow:visible";
       root = host.attachShadow({ mode: "open" });
       root.innerHTML = `<style>${CSS}</style>
         <div class="sub"><div class="en"></div><div class="ja"></div></div>
@@ -287,12 +322,14 @@
     button.warn{background:#ff9f43}
     :host(.float) button{position:fixed;top:14px;right:300px;transition:opacity .25s}
     :host(.hide) button{opacity:0;pointer-events:none}
+    :host(.compact) button{height:30px;margin-right:6px;padding:0 11px 0 6px;font-size:13px}
   `;
   const BTN_ICON = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect width="22" height="22" rx="6" fill="#16181d"/><rect x="4" y="7.5" width="14" height="2.6" rx="1.3" fill="#fff"/><rect x="4" y="12" width="14" height="2.6" rx="1.3" fill="#ffd83d"/></svg>';
   function makeLauncher() {
     btnHost = document.createElement("div");
     btnHost.id = "primesubs-ja-btn";
     btnHost.style.cssText = "display:contents";
+    if (SITE.name === "youtube") btnHost.classList.add("compact");
     const r = btnHost.attachShadow({ mode: "open" });
     r.innerHTML = `<style>${BTN_CSS}</style><button title="Dual Subs JA：セリフ一覧を開く (T)" aria-label="Dual Subs JA：セリフ一覧を開く">${BTN_ICON}<span>JA</span></button>`;
     launcherBtn = r.querySelector("button");
@@ -300,17 +337,24 @@
     launcherBtn.addEventListener("mousedown", (e) => e.stopPropagation());
   }
   // Prime's markup uses generated class names, so find the button by its accessible label.
-  const CAPTION_LABEL = /字幕|subtitle|caption|closed/i;
   function findCaptionButton() {
-    const scope = document.querySelector(".atvwebplayersdk-player-container") || document;
-    const cands = [...scope.querySelectorAll("button, [role=button]")].filter((b) => {
+    const scope = playerEl() || document;
+    const pr = (playerEl() || document.documentElement).getBoundingClientRect();
+    const inZone = (rc) => pr.height < 50 || (SITE.zone === "top" ? rc.top < pr.top + pr.height * 0.4 : rc.top > pr.top + pr.height * 0.6);   // no usable player box: do not filter
+    const ok = (b) => {
       if (b.closest("#primesubs-ja-btn")) return false;
-      const label = (b.getAttribute("aria-label") || "") + " " + (b.getAttribute("title") || "");
-      if (!CAPTION_LABEL.test(label)) return false;
       const rc = b.getBoundingClientRect();
-      return rc.width > 16 && rc.width < 120 && rc.top < innerHeight * 0.5; // the top control bar, not menu items
-    });
-    return cands[0] || null;
+      return rc.width > 16 && rc.width < 140 && inZone(rc);
+    };
+    if (SITE.capSel) {
+      const hit = [...scope.querySelectorAll(SITE.capSel)].find(ok);
+      if (hit) return hit;
+    }
+    // otherwise find it by its accessible label (Prime's markup uses generated class names)
+    return [...scope.querySelectorAll("button, [role=button]")].find((b) => {
+      const label = (b.getAttribute("aria-label") || "") + " " + (b.getAttribute("title") || "") + " " + (b.getAttribute("data-tooltip-title") || "");
+      return SITE.capLabel.test(label) && ok(b);
+    }) || null;
   }
   // Climb from the caption button to the element that sits in the horizontal row of control buttons
   // (volume, PiP, fullscreen, ...). Putting ours in that row keeps it level with them and clickable.
@@ -362,17 +406,17 @@
       (document.head || document.documentElement).append(nativeStyle, shrinkStyle);
     }
     nativeStyle.textContent = S.enabled && uiOn && S.hideNative && hasCues
-      ? "[class*=\"atvwebplayersdk-captions\"],[class*=\"atvwebplayersdk-subtitle\"]{visibility:hidden !important}"
+      ? SITE.nativeHide + "{visibility:hidden !important}"
       : "";
     // Best effort: shrink the picture to leave room for the bar below it.
-    shrinkStyle.textContent = S.enabled && uiOn && S.subPos === "below" && hasCues
-      ? "video,.atvwebplayersdk-video-surface{height:calc(100% - 18vh) !important}"
+    shrinkStyle.textContent = S.enabled && uiOn && SITE.shrink && S.subPos === "below" && hasCues
+      ? "video,.atvwebplayersdk-video-surface{height:calc(100% - 18%) !important}"
       : "";
     if (host) {
       enEl.style.fontSize = Math.round(S.fontSize * 0.85) + "px";
       jaEl.style.fontSize = S.fontSize + "px";
       autoBtn.classList.toggle("on", S.autoPause);
-      subBox.classList.toggle("below", S.subPos === "below");
+      subBox.classList.toggle("below", S.subPos === "below" && SITE.shrink);
     }
     shown = null;
   }
@@ -452,7 +496,7 @@
   const domCache = new Map();
   let domBusy = false;
   async function domFallback() {
-    const els = [...document.querySelectorAll(".atvwebplayersdk-captions-text")];
+    const els = [...document.querySelectorAll(SITE.nativeText)];
     const text = els.map((n) => n.innerText).join(" ").trim();
     if (!text || !/[A-Za-z]/.test(text)) return "";
     if (domCache.has(text)) return domCache.get(text);
@@ -463,6 +507,17 @@
       if (r && r.ok) { domCache.set(text, r.ja); if (domCache.size > 200) domCache.delete(domCache.keys().next().value); }
     }
     return domCache.get(text) || "";
+  }
+
+  // keep the overlay's box on top of the player (YouTube's player is only part of the page)
+  function syncHostBox() {
+    if (!host) return;
+    const src = playerEl() || cueVideo;
+    if (!src || !src.isConnected) return;
+    const r = src.getBoundingClientRect();
+    if (r.width < 120 || r.height < 80) return;
+    const st = host.style;
+    st.left = r.left + "px"; st.top = r.top + "px"; st.width = r.width + "px"; st.height = r.height + "px";
   }
 
   // ---------- status + diagnostics ----------
@@ -495,7 +550,7 @@
     return {
       version: chrome.runtime.getManifest().version, path: location.pathname,
       cues: { n: cues.length, src: srcLang, translated: tr.filter((x) => x != null).length, first: cues[0] && [cues[0].begin, cues[0].end], last: cues.length && [cues[cues.length - 1].begin, cues[cues.length - 1].end] },
-      ui: { uiOn, panelOpen, launcher: btnPlaced, captionButtonFound: !!findCaptionButton(), playerContainer: !!document.querySelector(".atvwebplayersdk-player-container") },
+      ui: { uiOn, panelOpen, launcher: btnPlaced, captionButtonFound: !!findCaptionButton(), playerContainer: !!playerEl() },
       hook: hookStats, videos: vids, nativeCaptionCandidates: nativeCaptionCandidates(),
       settings: S
     };
@@ -529,7 +584,7 @@
     if (cues.length) {
       // The subtitles belong to one page. Prime may swap its <video> element during playback, so re-bind to
       // the live one while the player is open instead of treating that as "player closed".
-      const samePage = location.pathname === cuePath;
+      const samePage = SITE.pageKey() === cuePath;
       const live = samePage ? playerVideo() : null;
       if (live) cueVideo = live;
       if (!live) {
@@ -542,8 +597,10 @@
       inactiveSince = 0;
       setUiOn(true);
     }
+    syncHostBox();
+    if (SITE.adShowing()) { subBox.style.display = "none"; placeLauncher(false); return; }   // YouTube ads reuse the <video>
     const v = getVideo();
-    const present = !!v && (cues.length > 0 || !!document.querySelector(".atvwebplayersdk-player-container"));
+    const present = !!v && (cues.length > 0 || !!playerEl());
     placeLauncher(S.enabled && present, cues.length === 0 || !!lastError);   // orange while no subtitle file has been captured
     if (!S.enabled || !v) { subBox.style.display = "none"; return; }
     const t = v.currentTime - S.offset;

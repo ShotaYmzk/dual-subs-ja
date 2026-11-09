@@ -5,10 +5,10 @@ Dual Subs JA (PLaMo)
 ※ 商標の観点で「Prime」を名前から外すことを推奨します（publish-checklist.md の A-2 を参照）。
 
 ## 概要（短い説明・132文字以内）
-Prime Videoの英語字幕に日本語を並べて表示。翻訳はPC内で完結し、字幕は外部に送信されません。単語ホバー・セリフ一覧つき。
+Prime Video・Netflix・YouTubeの字幕に日本語を並べて表示。翻訳はPC内で完結し、字幕は外部に送信されません。
 
 ## 詳細な説明（そのまま貼り付け用）
-Prime Video の英語字幕の下に、日本語の訳をそっと添える拡張機能です。英語のまま観たいけれど、わからない所は確認したい。そんな使い方のために作りました。
+Prime Video・Netflix・YouTube の英語字幕の下に、日本語の訳をそっと添える拡張機能です。英語のまま観たいけれど、わからない所は確認したい。そんな使い方のために作りました。
 
 ■ 字幕を「先読み」して翻訳
 再生位置から先のセリフを順に翻訳しておくので、字幕が出る時には訳が間に合います。短いセリフなら、翻訳は1秒ほどです。
@@ -27,9 +27,12 @@ Prime Video の英語字幕の下に、日本語の訳をそっと添える拡�
 ■ 英語字幕がない作品でも
 日本語字幕しかない作品は、日本語を英語に翻訳して、英語＋日本語の対訳で表示します。
 
+■ 対応サイト
+Prime Video / Netflix / YouTube（YouTube は字幕がある動画で、字幕を自動でオンにします。設定でオフにもできます）。
+
 ■ 使い方
 1. インストールすると案内画面が開きます。翻訳モデル（標準 約573MB）を取得します（初回のみ）。
-2. Prime Video で字幕を「英語」（なければ日本語）にして再生します。
+2. Prime Video・Netflix・YouTube で動画を再生します（Prime Video は字幕を「英語」、なければ日本語に）。
 3. 字幕ボタンの隣の「JA」ボタンで、セリフ一覧を開きます。
 
 ■ プライバシー
@@ -38,7 +41,7 @@ Prime Video の英語字幕の下に、日本語の訳をそっと添える拡�
 ■ ご注意
 ・訳文は PLaMo 3 Translate による機械翻訳で、誤訳を含むことがあります。
 ・Chrome 137 以降、Mac / Windows の PC 向けです。メモリ 8GB 以上を推奨します。
-・本拡張は非公式です。Preferred Networks, Inc. および Amazon とは関係ありません。「Prime Video」は Amazon.com, Inc. またはその関連会社の商標です。
+・本拡張は非公式です。Preferred Networks, Inc. および Amazon とは関係ありません。「Prime Video」は Amazon.com, Inc.、「Netflix」は Netflix, Inc.、「YouTube」は Google LLC の商標です。
 ・翻訳モデルは PLaMo Community License で提供されます。個人・学術目的は登録なしで利用できます。仕事・商用の利用には Preferred Networks への事前登録が必要です。
 ・Built with PLaMo.
 

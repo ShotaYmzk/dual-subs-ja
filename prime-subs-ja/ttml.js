@@ -91,7 +91,61 @@
     return { lang: "", cues };
   }
 
-  const api = { parse, parseVtt, looksLikeTTML };
+  // ---- YouTube ----
+  function tidy(cues) {
+    cues.sort((a, b) => a.begin - b.begin);
+    const out = [];
+    for (let i = 0; i < cues.length; i++) {
+      const c = cues[i], n = cues[i + 1];
+      if (n && c.end > n.begin) c.end = n.begin;           // rolling auto-captions overlap: cut at the next one
+      if (c.end - c.begin < 0.05) continue;
+      if (out.length && out[out.length - 1].text === c.text) { out[out.length - 1].end = Math.max(out[out.length - 1].end, c.end); continue; }
+      out.push(c);
+    }
+    return out;
+  }
+  function parseJson3(text) {
+    let d;
+    try { d = JSON.parse(text); } catch { return { lang: "", cues: [] }; }
+    const cues = [];
+    for (const e of d.events || []) {
+      if (!e.segs || e.tStartMs == null) continue;
+      const raw = e.segs.map((s) => s.utf8 || "").join("").replace(/\u200b/g, "");
+      const lines = raw.split("\n").map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+      if (!lines.length) continue;
+      cues.push({ begin: e.tStartMs / 1000, end: (e.tStartMs + (e.dDurationMs || 2000)) / 1000, text: lines.join("\n") });
+    }
+    return { lang: "", cues: tidy(cues) };
+  }
+  function parseYtXml(text) {
+    const dec2 = (s) => decode(decode(s));
+    const cues = [];
+    let m;
+    const reP = /<p\s+([^>]*?)>([\s\S]*?)<\/p>/g;                       // srv3: <p t="ms" d="ms">…<s>…</s></p>
+    while ((m = reP.exec(text))) {
+      const t = attr("<p " + m[1] + ">", "t"), d = attr("<p " + m[1] + ">", "d");
+      if (t == null) continue;
+      const body = dec2(m[2].replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, ""));
+      const lines = body.split("\n").map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+      if (lines.length) cues.push({ begin: +t / 1000, end: (+t + (+d || 2000)) / 1000, text: lines.join("\n") });
+    }
+    if (!cues.length) {
+      const reT = /<text\s+([^>]*?)>([\s\S]*?)<\/text>/g;               // classic: <text start="s" dur="s">…</text>
+      while ((m = reT.exec(text))) {
+        const st = attr("<text " + m[1] + ">", "start"), du = attr("<text " + m[1] + ">", "dur");
+        if (st == null) continue;
+        const body = dec2(m[2].replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, ""));
+        const lines = body.split("\n").map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+        if (lines.length) cues.push({ begin: +st, end: +st + (+du || 2), text: lines.join("\n") });
+      }
+    }
+    return { lang: "", cues: tidy(cues) };
+  }
+  function parseYouTube(text) {
+    return /^\s*\{/.test(text) ? parseJson3(text) : parseYtXml(text);
+  }
+
+  const api = { parse, parseVtt, parseJson3, parseYtXml, parseYouTube, looksLikeTTML };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.PrimeSubsTTML = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

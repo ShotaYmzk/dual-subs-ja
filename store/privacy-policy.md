@@ -4,10 +4,10 @@
 
 ## 日本語
 
-Dual Subs JA（以下「本拡張」）は、Prime Video の字幕を日本語（または英語）に翻訳して表示する Chrome 拡張です。
+Dual Subs JA（以下「本拡張」）は、動画サービス（Prime Video・Netflix・YouTube）の字幕を日本語（または英語）に翻訳して表示する Chrome 拡張です。
 
 ### 取り扱う情報
-- **字幕テキスト**: 視聴中の動画の字幕ファイルを、ページの通信から読み取ります。翻訳のためにこのPC内の翻訳エンジン（ブラウザ内蔵、またはお客様が設定した手元の Ollama）へ渡します。**外部のサーバーには送信しません。**
+- **字幕テキスト**: 視聴中の動画の字幕ファイルを、ページの通信から読み取ります（YouTube では、字幕を取得するため、プレイヤーの字幕の設定を自動でオンにする場合があります。設定画面でオフにできます）。翻訳のためにこのPC内の翻訳エンジン（ブラウザ内蔵、またはお客様が設定した手元の Ollama）へ渡します。**外部のサーバーには送信しません。**
 - **設定**: 表示設定・選んだモデル・用語集を、お使いのブラウザ（chrome.storage）に保存します。Google アカウントで同期される設定が含まれることがあります（chrome.storage.sync）。
 - **翻訳モデルのファイル**: ブラウザ内に保存します（容量が大きいため、削除は設定画面から行えます）。
 
@@ -30,7 +30,7 @@ GitHub の Issues: https://github.com/ShotaYmzk/dual-subs-ja/issues
 
 ## English
 
-Dual Subs JA ("the extension") shows Japanese (or English) translations next to Prime Video subtitles.
+Dual Subs JA ("the extension") shows Japanese (or English) translations next to the subtitles of Prime Video, Netflix and YouTube.
 
 **Data handled.** The extension reads the subtitle file of the video you are watching from the page's network traffic and passes the text to a translation engine **on your own device** (the built-in in-browser engine, or a local Ollama server that you configure). **Subtitle text is never sent to any external server.** Your settings (display options, selected model, glossary) are stored in your browser (`chrome.storage`; sync settings may be synced by your Google account). Translation model files are stored in your browser and can be deleted from the settings page.
 

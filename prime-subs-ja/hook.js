@@ -228,11 +228,14 @@
     const fmt = (t) => { const h = Math.floor(t / 3600), mi = Math.floor(t / 60) % 60, s = t % 60; return String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0") + ":" + s.toFixed(3).padStart(6, "0"); };
     const out = ["WEBVTT", ""];
     // Are cue times absolute (the whole programme) or restart at 0 in every segment? Decide once from all
-    // segments (a per-segment guess drifts). Never trust X-TIMESTAMP-MAP here: if cues are already absolute,
-    // applying it would add the offset twice and the subtitles slide out of sync after seeking.
-    const ratios = segs.map((sg, i) => { const m = (bodies[i] || "").match(/(\S+)\s+-->/); return sg.start > 30 && m ? ts(m[1]) / sg.start : null; }).filter((x) => x != null).sort((x, y) => x - y);
-    const relative = ratios.length >= 2 && ratios[Math.floor(ratios.length / 2)] < 0.5;
-    stats.disney.timing = relative ? "relative" : "absolute";
+    // segments: a restart (a segment starting earlier than the previous one ended) means relative.
+    // Never trust X-TIMESTAMP-MAP: on absolute cues it would add the offset twice and subtitles drift.
+    const times = bodies.map((bd) => { const all = [...bd.matchAll(/(\S+)\s+-->\s+(\S+)/g)]; return all.length ? { f: ts(all[0][1]), l: ts(all[all.length - 1][2]) } : null; });
+    let relative = false, prev = null;
+    times.forEach((t, i) => { if (!t) return; if (prev && t.f + 1 < prev.l && segs[i].start > 1) relative = true; prev = t; });
+    stats.disney.track = { lang, playlist: pathOnly(plUrl), segments: segs.length, timing: relative ? "relative" : "absolute",
+      segFirst: times.slice(0, 6).map((t) => t && Math.round(t.f)), segStart: segs.slice(0, 6).map((x) => Math.round(x.start)) };
+    postStats(true);
     segs.forEach((sg, i) => {
       const body = bodies[i] || "";
       const shift = relative ? sg.start : 0;

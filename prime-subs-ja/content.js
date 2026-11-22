@@ -201,7 +201,9 @@
   // ---------- video ----------
   function findVideo() {
     const vs = deepAll("video").filter((v) => v.readyState > 0);
-    vs.sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight);
+    // prefer the one that is actually playing (sites keep hidden / preview / previous-title <video>s around)
+    const score = (v) => (!v.paused && !v.ended ? 1e9 : 0) + (isShown(v) ? 1e8 : 0) + v.clientWidth * v.clientHeight;
+    vs.sort((a, b) => score(b) - score(a));
     return vs[0] || null;
   }
   function isShown(v) {
@@ -216,7 +218,12 @@
     const v = findVideo();
     return v && isShown(v) ? v : null;
   }
-  const getVideo = () => (cueVideo && isShown(cueVideo) ? cueVideo : findVideo());
+  const getVideo = () => {
+    if (cueVideo && isShown(cueVideo) && !cueVideo.paused) return cueVideo;
+    const f = findVideo();                       // another <video> may be the one really playing
+    if (f && !f.paused && f !== cueVideo && isShown(f)) cueVideo = f;
+    return cueVideo && isShown(cueVideo) ? cueVideo : f;
+  };
   const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.offset : null; };
   let lastSeek = 0;
   function seekTo(i, play) {

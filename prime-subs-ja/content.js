@@ -29,8 +29,8 @@
   SITES.disney = {
     name: "disney", playerSel: "disney-web-player,.btm-media-client-element,[class*='btm-media-overlays']", zone: "bottom",
     capSel: "[data-testid='audio-subtitle-button'],[data-testid*='audio-subtitle' i],[data-testid*='audioSubtitle' i],[data-testid*='caption' i],[data-gv2elementkey*='subtitle' i],[data-testid*='subtitle'],[data-gv2elementkey*='audioSubtitle']", capLabel: /音声と字幕|字幕|audio ?(&|and) ?subtitles|subtitles|captions/i,
-    nativeHide: ".dss-subtitle-renderer-wrapper,.dss-subtitle-renderer-cue,[class*='dss-subtitle-renderer']",
-    nativeText: ".dss-subtitle-renderer-cue", shrink: false,
+    nativeHide: ".dss-subtitle-renderer-wrapper,.dss-subtitle-renderer-cue,[class*='dss-subtitle-renderer'],[class*='hive-subtitle-renderer']",
+    nativeText: ".dss-subtitle-renderer-cue,.hive-subtitle-renderer-line", shrink: false,
     pageKey: () => location.pathname, adShowing: () => false
   };
   const SITE = /(^|\.)disneyplus\.com$/.test(HOST) ? SITES.disney : /(^|\.)netflix\.com$/.test(HOST) ? SITES.netflix : /(^|\.)youtube\.com$/.test(HOST) ? SITES.youtube : SITES.prime;
@@ -256,7 +256,10 @@ function nativeScan() {
   } catch (e) {}
   return out;
 }
+let synced = false;
 function autoSync(v) {
+  // Disney+'s player timeline starts 20 s after the subtitle timeline (played.start = 20.0 when playing from the beginning).
+  if (!synced && autoOff === 0 && v.played.length && Math.abs(v.played.start(0) - 20) < 0.1 && v.currentTime > 20.5) autoOff = 20;
   let txt = "";
   try { txt = norm(deepAll(SITE.nativeText).map((e) => e.textContent).join(" ")); } catch (e) {}
   if (Date.now() - lastBeat > 4000) { lastBeat = Date.now(); logSync("beat", v, txt); }
@@ -272,7 +275,7 @@ function autoSync(v) {
     if (d < -5 || d > 120) continue;            // native cue appears right at its start: d should be the offset
     if (!best || Math.abs(d - autoOff) < Math.abs(best - autoOff)) best = d;
   }
-  if (best != null && Math.abs(best - autoOff) > 0.4) autoOff = best;
+  if (best != null) { synced = true; if (Math.abs(best - autoOff) > 0.4) autoOff = best; }
 }
 const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.offset - autoOff : null; };
   let lastSeek = 0;
@@ -673,7 +676,7 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
   // ---------- leaving the player ----------
   function setUiOn(on) { if (uiOn !== on) { uiOn = on; applySettings(); } }
   function resetState() {
-    autoOff = 0; lastNative = "";
+    autoOff = 0; lastNative = ""; synced = false;
     cues = []; tr = []; cueKey = ""; cueVideo = null; runId++;
     panelOpen = false;
     if (panel) { panel.classList.remove("open"); subBox.classList.remove("open"); }

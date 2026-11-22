@@ -29,6 +29,15 @@
   function noteDisney(url, ct, state) {
     if (!IS_DISNEY) return;
     const where = pathOnly(url);
+    // Which media assets does the player pull, and in what order? (interstitial "/int/" = bumper/logo, "-MAIN" = programme)
+    try {
+      const m = new URL(url, location.href).pathname.match(/\/(int\/)?ps01\/disney\/.*?\/([0-9a-f]{4})-(MAIN|DUB_CARD)\/(\d+)\//);
+      if (m && m[3] === "MAIN") {
+        const a = stats.disney.assets || (stats.disney.assets = []);
+        const id = (m[1] ? "int:" : "") + m[2];
+        if (!a.find((x) => x.id === id)) { a.push({ id, int: !!m[1], order: a.length, t: new Date().toISOString().slice(11, 19), first: pathOnly(url).slice(-60) }); postStats(true); }
+      }
+    } catch (e) {}
     const paths = stats.disney.paths;
     const old = paths.find((x) => x.where === where);
     if (old) { old.state = state; old.contentType = ct; }
@@ -95,7 +104,15 @@
         post({ type: "yt", url, text, lang: ylang, asr: q.get("kind") === "asr" });
       } else if (/^\s*WEBVTT/.test(text)) { kind = "vtt"; post({ type: "vtt", url, text, lang }); }
       else if (/<tt[\s>]/.test(text.slice(0, 2000)) && /<p[\s>]/.test(text)) { kind = "ttml"; post({ type: "ttml", url, text, lang }); }
-      else if (IS_DISNEY && /^\s*#EXTM3U/.test(text)) { if (disneyPlaylist(url, text)) kind = "hls"; }
+      else if (IS_DISNEY && /^\s*#EXTM3U/.test(text)) {
+        try {
+          if (/#EXTINF:/.test(text)) {
+            let d = 0; text.replace(/#EXTINF:([\d.]+)/g, (_, x) => (d += +x, ""));
+            const pl = (stats.disney.playlists || (stats.disney.playlists = []));
+            const w = pathOnly(url).slice(-70);
+            if (!pl.find((x) => x.w === w)) { pl.push({ w, dur: Math.round(d * 10) / 10, n: (text.match(/#EXTINF:/g) || []).length, disc: (text.match(/#EXT-X-DISCONTINUITY/g) || []).length, int: /\/int\//.test(url), map: (text.match(/#EXT-X-MAP:[^\n]*/) || [""])[0].slice(0, 60) }); if (pl.length > 12) pl.shift(); }
+          }
+        } catch (e) {} if (disneyPlaylist(url, text)) kind = "hls"; }
       else if (!IS_NETFLIX && !IS_YOUTUBE && (/json/i.test(ctype || "") || /^\s*[{\[]/.test(text.slice(0, 5)))) { if (IS_DISNEY ? disneyJSON(url, text) : scanJSON(text)) kind = "subtitle-list"; }
     }
     if (kind !== "other") {

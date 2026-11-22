@@ -234,7 +234,8 @@
     let relative = false, prev = null;
     times.forEach((t, i) => { if (!t) return; if (prev && t.f + 1 < prev.l && segs[i].start > 1) relative = true; prev = t; });
     stats.disney.track = { lang, playlist: pathOnly(plUrl), segments: segs.length, timing: relative ? "relative" : "absolute",
-      segFirst: times.slice(0, 6).map((t) => t && Math.round(t.f)), segStart: segs.slice(0, 6).map((x) => Math.round(x.start)) };
+      segFirst: times.slice(0, 6).map((t) => t && Math.round(t.f)), segStart: segs.slice(0, 6).map((x) => Math.round(x.start)),
+      tsMap: bodies.slice(0, 3).map((bd) => (bd.match(/X-TIMESTAMP-MAP=[^\r\n]*/) || [null])[0]), lastEnd: times.length && times[times.length - 1] ? Math.round(times[times.length - 1].l) : null, totalDur: Math.round(at) };
     postStats(true);
     segs.forEach((sg, i) => {
       const body = bodies[i] || "";

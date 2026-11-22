@@ -593,7 +593,7 @@
     return out;
   }
   function diagnostics() {
-    const vids = deepAll("video").map((v) => ({ ready: v.readyState, w: Math.round(v.getBoundingClientRect().width), h: Math.round(v.getBoundingClientRect().height), paused: v.paused, t: Math.round(v.currentTime) }));
+    const vids = deepAll("video").map((v) => ({ ready: v.readyState, w: Math.round(v.getBoundingClientRect().width), h: Math.round(v.getBoundingClientRect().height), paused: v.paused, t: Math.round(v.currentTime * 10) / 10, dur: Math.round(v.duration || 0), buf: v.buffered.length ? [Math.round(v.buffered.start(0) * 10) / 10, Math.round(v.buffered.end(v.buffered.length - 1) * 10) / 10] : null, seek: v.seekable.length ? [Math.round(v.seekable.start(0) * 10) / 10, Math.round(v.seekable.end(v.seekable.length - 1))] : null }));
     return {
       version: chrome.runtime.getManifest().version, path: location.pathname,
       cues: { n: cues.length, src: srcLang, translated: tr.filter((x) => x != null).length, first: cues[0] && [cues[0].begin, cues[0].end], last: cues.length && [cues[cues.length - 1].begin, cues[cues.length - 1].end] },

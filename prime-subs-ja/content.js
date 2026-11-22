@@ -232,12 +232,30 @@ function logSync(kind, v, txt) {
   try {
     const m = [];
     if (txt) for (let k = 0; k < cues.length && m.length < 4; k++) { const c = norm(enLine(k)); if (c && (c === txt || c.includes(txt) || txt.includes(c))) m.push(cues[k].begin); }
-    syncLog.push({ kind, ct: Math.round(v.currentTime * 100) / 100, wall: new Date().toISOString().slice(11, 19), native: (txt || "").slice(0, 50), matches: m, autoOff: Math.round(autoOff * 100) / 100, paused: v.paused });
+    syncLog.push({ kind, ui: kind === "beat" || kind === "manual" ? nativeScan().filter((x) => x.time).map((x) => x.t) : undefined, scan: kind === "beat" && syncLog.length % 5 === 0 ? nativeScan().filter((x) => x.cap).slice(0, 4) : undefined, ct: Math.round(v.currentTime * 100) / 100, wall: new Date().toISOString().slice(11, 19), native: (txt || "").slice(0, 50), matches: m, autoOff: Math.round(autoOff * 100) / 100, paused: v.paused });
     if (syncLog.length > 80) syncLog.shift();
   } catch (e) {}
 }
 let lastBeat = 0;
 const norm = (x) => (x || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9fff]+/g, " ").trim();
+function nativeScan() {
+  const out = [];
+  try {
+    for (const el of deepAll("div,span,p")) {
+      if (el.children.length || el.closest("#primesubs-ja-host,#primesubs-ja-btn")) continue;
+      const t = el.textContent.trim();
+      if (!t) continue;
+      const cls = String(el.className || "");
+      const isTime = /^-?\d{1,2}:\d{2}(:\d{2})?$/.test(t);
+      const r = el.getBoundingClientRect();
+      const cap = /subtitle|caption|cue|timed/i.test(cls + " " + (el.parentElement ? el.parentElement.className : ""));
+      if (!isTime && !cap) continue;
+      out.push({ t: t.slice(0, 60), cls: cls.slice(0, 50), cap: cap, time: isTime, hid: getComputedStyle(el).display === "none", y: Math.round(r.top) });
+      if (out.length >= 12) break;
+    }
+  } catch (e) {}
+  return out;
+}
 function autoSync(v) {
   let txt = "";
   try { txt = norm(deepAll(SITE.nativeText).map((e) => e.textContent).join(" ")); } catch (e) {}
@@ -322,7 +340,7 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
             <button class="x">✕</button></div>
           <div class="status"></div>
           <div class="list"></div>
-          <div class="keys">A 前 / S もう一度 / D 次 / P 自動停止 / T 一覧<br>訳は PLaMo 3 Translate による機械翻訳（Built with PLaMo）<br><button class="diag" title="うまく動かないとき、この情報を開発者に送ってください">診断情報をコピー</button></div>
+          <div class="keys">A 前 / S もう一度 / D 次 / P 自動停止 / T 一覧<br>Shift+クリック：その行を「今の音声」に合わせる<br>訳は PLaMo 3 Translate による機械翻訳（Built with PLaMo）<br><button class="diag" title="うまく動かないとき、この情報を開発者に送ってください">診断情報をコピー</button></div>
         </div>`;
       subBox = root.querySelector(".sub");
       enEl = root.querySelector(".en");
@@ -337,7 +355,13 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
       autoBtn.onclick = () => chrome.storage.sync.set({ autoPause: !S.autoPause });
       list.addEventListener("click", (e) => {
         const r = e.target.closest(".row");
-        if (r) seekTo(+r.dataset.i, true);
+        if (!r) return;
+        if (e.shiftKey) {                      // "this line is what I hear right now" -> calibrate the offset
+          const v = getVideo();
+          if (v) { autoOff = v.currentTime - S.offset - cues[+r.dataset.i].begin; lastSeek = Date.now(); logSync("manual", v, norm(enLine(+r.dataset.i))); }
+          return;
+        }
+        seekTo(+r.dataset.i, true);
       });
       list.addEventListener("wheel", () => { list.__userScroll = Date.now(); }, { passive: true });
       buildPanelRows();

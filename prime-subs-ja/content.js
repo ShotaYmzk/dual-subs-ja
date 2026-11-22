@@ -260,13 +260,8 @@ let synced = false;
 function autoSync(v) {
   // Disney+'s player timeline starts 20 s after the subtitle timeline (played.start = 20.0 when playing from the beginning).
   if (!synced && v.played.length && Math.abs(v.played.start(0) - 20) < 0.1 && v.currentTime > 20.5) {
-    // The programme starts 20 s into the player timeline; if the short Disney+ bumper ("/int/" asset) was inserted, it comes on top.
-    let base = 20;
-    try {
-      const d = hookStats && hookStats.disney;
-      const ip = d && (d.playlists || []).filter((x) => x.int && !/128/.test(x.w))[0];
-      if (d && (d.assets || []).some((a) => a.int) && ip) base += ip.dur;
-    } catch (e) {}
+    // The programme starts 20 s into the player timeline (measured with and without the Disney+ bumper: ~20.1 s both ways).
+    const base = 20;
     if (Math.abs(autoOff - base) > 0.05) autoOff = base;
   }
   let txt = "";
@@ -284,7 +279,11 @@ function autoSync(v) {
     if (d < -5 || d > 120) continue;            // native cue appears right at its start: d should be the offset
     if (!best || Math.abs(d - autoOff) < Math.abs(best - autoOff)) best = d;
   }
-  if (best != null) { synced = true; if (Math.abs(best - autoOff) > 0.4) autoOff = best; }
+  if (best != null) {
+    // Detection lag only ever makes the measured offset too big, so refine downwards on small differences and jump on big ones.
+    if (!synced || Math.abs(best - autoOff) > 0.6) autoOff = best; else if (best < autoOff) autoOff = best;
+    synced = true;
+  }
 }
 const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.offset - autoOff : null; };
   let lastSeek = 0;

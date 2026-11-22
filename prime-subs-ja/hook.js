@@ -227,19 +227,15 @@
     const ts = (s) => { const m = s.match(/(?:(\d+):)?(\d+):(\d+)[.,](\d+)/); return m ? (+(m[1] || 0)) * 3600 + +m[2] * 60 + +m[3] + +("0." + m[4]) : 0; };
     const fmt = (t) => { const h = Math.floor(t / 3600), mi = Math.floor(t / 60) % 60, s = t % 60; return String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0") + ":" + s.toFixed(3).padStart(6, "0"); };
     const out = ["WEBVTT", ""];
+    // Are cue times absolute (the whole programme) or restart at 0 in every segment? Decide once from all
+    // segments (a per-segment guess drifts). Never trust X-TIMESTAMP-MAP here: if cues are already absolute,
+    // applying it would add the offset twice and the subtitles slide out of sync after seeking.
+    const ratios = segs.map((sg, i) => { const m = (bodies[i] || "").match(/(\S+)\s+-->/); return sg.start > 30 && m ? ts(m[1]) / sg.start : null; }).filter((x) => x != null).sort((x, y) => x - y);
+    const relative = ratios.length >= 2 && ratios[Math.floor(ratios.length / 2)] < 0.5;
+    stats.disney.timing = relative ? "relative" : "absolute";
     segs.forEach((sg, i) => {
       const body = bodies[i] || "";
-      const first = body.match(/(\S+)\s+-->/);
-      // Absolute cue times must not be shifted merely because a cue overlaps a boundary.
-      // Use the explicit MPEG timestamp mapping when present, relative to the first segment.
-      const mapping = (b) => {
-        const line = (b.match(/X-TIMESTAMP-MAP[^\r\n]*/) || [""])[0];
-        const local = line.match(/LOCAL:([\d:.]+)/), mpeg = line.match(/MPEGTS:(\d+)/);
-        return local && mpeg ? +mpeg[1] / 90000 - ts(local[1]) : null;
-      };
-      const base = mapping(bodies[0] || ""), current = mapping(body);
-      const shift = base != null && current != null ? current - base :
-        (i > 0 && first && ts(first[1]) < 1 && sg.start > 1 ? sg.start : 0);
+      const shift = relative ? sg.start : 0;
       for (const block of body.replace(/\r/g, "").split(/\n{2,}/)) {
         const ls = block.split("\n"), k = ls.findIndex((x) => x.includes("-->"));
         if (k < 0) continue;

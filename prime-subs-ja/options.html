@@ -3,7 +3,7 @@
 <title>設定 - Dual Subs JA</title><link rel="stylesheet" href="ui.css"></head><body>
 <div class="shell">
 <nav class="side">
-  <p class="brand">Dual Subs JA<small>Prime Video の英語字幕に、日本語をそっと添える拡張です。</small></p>
+  <p class="brand">Dual Subs JA<small>Prime Video・Netflix・Disney+・YouTube の英語字幕に、日本語をそっと添える拡張です。</small></p>
   <ul>
     <li><a href="#look">見た目</a></li><li><a href="#study">学習</a></li><li><a href="#translate">翻訳</a></li>
     <li><a href="#sec-models">モデル</a></li><li><a href="#engine">実行環境</a></li><li><a href="#status">状態</a></li><li><a href="#about">プライバシーと権利</a></li>
@@ -15,7 +15,7 @@
   <div class="stage"><div class="screen" id="screen" aria-label="プレビュー">
     <div class="pic"><span class="tag">プレビュー</span></div>
     <div class="cap"><div class="en" id="pvEn">I'll take a rain check.</div><div class="ja" id="pvJa">また今度にさせてもらうよ。</div></div>
-    <div class="native" id="pvNative">Prime の元の字幕もここに出ています</div>
+    <div class="native" id="pvNative">元の字幕もここに出ています</div>
   </div></div>
 
   <h2 id="look">見た目</h2>
@@ -27,8 +27,8 @@
       <div class="seg" data-key="subPos"><button data-v="overlay">映像に重ねる</button><button data-v="below">画面の下</button></div></div>
     <div class="set"><div class="l"><b>日本語の大きさ</b><span>英語はその約85%で表示します。</span></div>
       <div class="rng"><input type="range" id="fontSize" min="16" max="56" step="1" aria-label="日本語の大きさ"><output id="fontOut"></output></div></div>
-    <div class="set"><div class="l"><b>Prime の字幕を隠す</b><span>重なって見づらいときにオンにします。</span></div>
-      <label class="sw"><input type="checkbox" id="hideNative" aria-label="Prime の字幕を隠す"><i></i></label></div>
+    <div class="set"><div class="l"><b>元の字幕を隠す</b><span>重なって見づらいときにオンにします。</span></div>
+      <label class="sw"><input type="checkbox" id="hideNative" aria-label="元の字幕を隠す"><i></i></label></div>
     <div class="set"><div class="l"><b>タイミングの補正</b><span>日本語が早く出るなら＋、遅いならーに。</span></div>
       <div class="stepper"><button data-step="-0.1" aria-label="0.1秒遅らせる">−</button><output id="offsetOut"></output><button data-step="0.1" aria-label="0.1秒早める">＋</button></div></div>
   </div>
@@ -49,7 +49,7 @@
   <h2 id="translate">翻訳</h2>
   <p class="hint">訳文の書き方を決めます。</p>
   <div class="group">
-    <div class="set"><div class="l"><b>この拡張を使う</b><span>オフにすると、Prime はいつもの表示に戻ります。</span></div>
+    <div class="set"><div class="l"><b>この拡張を使う</b><span>オフにすると、いつもの表示に戻ります。</span></div>
       <label class="sw"><input type="checkbox" id="enabled" aria-label="この拡張を使う"><i></i></label></div>
     <div class="set"><div class="l"><b>訳文の口調</b></div>
       <div class="seg" data-key="form"><button data-v="plain">だ・である</button><button data-v="polite">です・ます</button><button data-v="">おまかせ</button></div></div>

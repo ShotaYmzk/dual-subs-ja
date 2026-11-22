@@ -1,7 +1,7 @@
 # ダッシュボードの「プライバシー」タブに貼り付ける回答
 
 ## 単一の目的（Single purpose）
-動画サービス（Prime Video・Netflix・YouTube）の字幕テキストを翻訳し、動画の上または下に対訳として表示する。
+動画サービス（Prime Video・Netflix・Disney+・YouTube）の字幕テキストを翻訳し、動画の上または下に対訳として表示する。
 
 ## 権限の使用理由（Permission justification）
 
@@ -15,7 +15,7 @@
 | ホスト | 説明 |
 |---|---|
 | https://*.primevideo.com/*, https://*.amazon.co.jp/gp/video/*, https://*.amazon.com/gp/video/*（および `/-/*/gp/video/*`） | Prime Video のプレイヤーが読み込む字幕ファイルを読み取り、翻訳を重ねて表示するため（コンテンツスクリプト）。上記以外のページでは動作しない。 |
-| https://*.netflix.com/*, https://www.youtube.com/* | Netflix・YouTube の動画ページで、プレイヤーが読み込む字幕データを読み取り、翻訳を重ねて表示するため（コンテンツスクリプト）。これらのサービスは動画ページへ画面遷移なしで移動するため、サイト全体にスクリプトを置かないと字幕を取り逃がす。 |
+| https://*.netflix.com/*, https://*.disneyplus.com/*, https://www.youtube.com/* | Netflix・Disney+・YouTube の動画ページで、プレイヤーが読み込む字幕データを読み取り、翻訳を重ねて表示するため（コンテンツスクリプト）。これらのサービスは動画ページへ画面遷移なしで移動するため、サイト全体にスクリプトを置かないと字幕を取り逃がす。 |
 | https://huggingface.co/*, https://*.huggingface.co/*, https://*.hf.co/* | 翻訳モデル（GGUF）を Hugging Face から取得するため。取得時に配信用サーバーへ転送される。 |
 | http://localhost:11434/*, http://127.0.0.1:11434/* | 任意機能。ユーザーが自分の PC で動かしている Ollama に翻訳を依頼するため。 |
 

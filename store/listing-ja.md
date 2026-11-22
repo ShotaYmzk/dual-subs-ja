@@ -5,10 +5,10 @@ Dual Subs JA (PLaMo)
 ※ 商標の観点で「Prime」を名前から外すことを推奨します（publish-checklist.md の A-2 を参照）。
 
 ## 概要（短い説明・132文字以内）
-Prime Video・Netflix・YouTubeの字幕に日本語を並べて表示。翻訳はPC内で完結し、字幕は外部に送信されません。
+Prime Video・Netflix・Disney+・YouTubeの字幕に日本語を並べて表示。翻訳はPC内で完結し、字幕は外部に送信されません。
 
 ## 詳細な説明（そのまま貼り付け用）
-Prime Video・Netflix・YouTube の英語字幕の下に、日本語の訳をそっと添える拡張機能です。英語のまま観たいけれど、わからない所は確認したい。そんな使い方のために作りました。
+Prime Video・Netflix・Disney+・YouTube の英語字幕の下に、日本語の訳をそっと添える拡張機能です。英語のまま観たいけれど、わからない所は確認したい。そんな使い方のために作りました。
 
 ■ 字幕を「先読み」して翻訳
 再生位置から先のセリフを順に翻訳しておくので、字幕が出る時には訳が間に合います。短いセリフなら、翻訳は1秒ほどです。
@@ -28,11 +28,11 @@ Prime Video・Netflix・YouTube の英語字幕の下に、日本語の訳をそ
 日本語字幕しかない作品は、日本語を英語に翻訳して、英語＋日本語の対訳で表示します。
 
 ■ 対応サイト
-Prime Video / Netflix / YouTube（YouTube は字幕がある動画で、字幕を自動でオンにします。設定でオフにもできます）。
+Prime Video / Netflix / Disney+ / YouTube（YouTube は字幕がある動画で、字幕を自動でオンにします。設定でオフにもできます）。
 
 ■ 使い方
 1. インストールすると案内画面が開きます。翻訳モデル（標準 約573MB）を取得します（初回のみ）。
-2. Prime Video・Netflix・YouTube で動画を再生します（Prime Video は字幕を「英語」、なければ日本語に）。
+2. Prime Video・Netflix・Disney+・YouTube で動画を再生します（Prime Video は字幕を「英語」、なければ日本語に）。
 3. 字幕ボタンの隣の「JA」ボタンで、セリフ一覧を開きます。
 
 ■ プライバシー

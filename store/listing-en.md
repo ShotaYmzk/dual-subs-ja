@@ -4,10 +4,10 @@
 Dual Subs JA (PLaMo)
 
 ## Short description (max 132 characters)
-Show Japanese next to Prime Video, Netflix and YouTube subtitles. Translation runs on your device; subtitles stay private.
+Show Japanese next to Prime Video, Netflix, Disney+ and YouTube subtitles. Translation runs on your device; subtitles stay private.
 
 ## Detailed description (paste as is)
-Dual Subs JA adds Japanese translations right under the English subtitles of Prime Video, Netflix and YouTube, so you can enjoy a show in English and still check the lines you missed.
+Dual Subs JA adds Japanese translations right under the English subtitles of Prime Video, Netflix, Disney+ and YouTube, so you can enjoy a show in English and still check the lines you missed.
 
 PRE-TRANSLATES AHEAD OF PLAYBACK
 The extension reads the subtitle file of the episode you are watching and translates the lines that are coming up, so the translation is ready when the line appears. A short line takes about a second.
@@ -27,11 +27,11 @@ NO ENGLISH SUBTITLES?
 If a title only has Japanese subtitles, the extension translates them into English and shows both.
 
 SUPPORTED SITES
-Prime Video, Netflix and YouTube. On YouTube the extension switches captions on for videos that have them (you can turn that off in the settings).
+Prime Video, Netflix, Disney+ and YouTube. On YouTube the extension switches captions on for videos that have them (you can turn that off in the settings).
 
 HOW TO USE
 1. After installing, a setup page opens. Download the translation model once (about 573 MB).
-2. Play a title on Prime Video, Netflix or YouTube (on Prime Video, turn English subtitles on, or Japanese if English is not available).
+2. Play a title on Prime Video, Netflix, Disney+ or YouTube (on Prime Video, turn English subtitles on, or Japanese if English is not available).
 3. Use the "JA" button next to Prime Video's subtitle button to open the transcript.
 
 PRIVACY

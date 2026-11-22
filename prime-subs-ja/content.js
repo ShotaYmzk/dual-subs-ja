@@ -45,6 +45,25 @@
     }
     return out;
   }
+  // document-level CSS cannot reach into shadow roots: put the same rule inside every open one
+  const shadowStyles = new Map();
+  function syncShadowStyles(css) {
+    if (SITE.name !== "disney") return;
+    const roots = new Set();
+    (function walk(scope) {
+      for (const el of scope.querySelectorAll("*")) {
+        if (el.id && el.id.startsWith("primesubs-ja")) continue;
+        if (el.shadowRoot) { roots.add(el.shadowRoot); walk(el.shadowRoot); }
+      }
+    })(document);
+    for (const r of roots) {
+      let st = shadowStyles.get(r);
+      if (!st) { st = document.createElement("style"); r.append(st); shadowStyles.set(r, st); }
+      if (st.textContent !== css) st.textContent = css;
+    }
+    for (const [r, st] of shadowStyles) if (!roots.has(r)) shadowStyles.delete(r);
+  }
+  const nativeCss = () => (S.enabled && uiOn && S.hideNative && cues.length > 0 ? SITE.nativeHide + "{visibility:hidden !important}" : "");
   const playerEl = () => deepAll(SITE.playerSel).find((el) => SITE.name !== "disney" || isShown(el)) ||
     (SITE.name === "disney" && /\/play\//.test(location.pathname)
       ? deepAll("video").find(isShown) : null);
@@ -190,7 +209,7 @@
     const r = v.getBoundingClientRect(), cs = getComputedStyle(v);
     return r.width > 200 && r.height > 100 && cs.visibility !== "hidden" && cs.display !== "none";
   }
-  // the playing <video>, only while Prime's player UI is on the page
+  // the playing <video>, only while the site's player UI is on the page
   function playerVideo() {
     if (!playerEl()) return null;
     if (cueVideo && isShown(cueVideo)) return cueVideo;
@@ -208,7 +227,7 @@
     lastSeek = Date.now();
   }
 
-  // ---------- UI (Shadow DOM so Prime's CSS cannot touch it) ----------
+  // ---------- UI (Shadow DOM so the site's CSS cannot touch it) ----------
   let host, root, subBox, enEl, jaEl, panel, list, tip, autoBtn, statusEl;
   let rowEls = [], rowEnEls = [], rowJaEls = [];
   const CSS = `
@@ -314,7 +333,7 @@
     });
     if (!cues.length) {
       const em = document.createElement("div"); em.className = "empty";
-      em.textContent = "Prime Video の字幕ファイルを検出できていません。字幕を「英語」（なければ日本語）にして、このタブを再読み込みしてください。それでも出ないときは、下の「診断情報をコピー」を押して内容を教えてください。";
+      em.textContent = "字幕ファイルを検出できていません。字幕を「英語」（なければ日本語）にして、このタブを再読み込みしてください。それでも出ないときは、下の「診断情報をコピー」を押して内容を教えてください。";
       frag.appendChild(em);
     }
     list.replaceChildren(frag);
@@ -327,7 +346,7 @@
   }
   const setRow = (i) => fillRow(i);
 
-  // ---------- launcher button: sits next to Prime's own subtitle button ----------
+  // ---------- launcher button: sits next to the site's own subtitle button ----------
   let btnHost = null, launcherBtn = null, btnPlaced = "", capSeen = false;
   const BTN_CSS = `
     :host{all:initial}
@@ -356,7 +375,7 @@
     launcherBtn.addEventListener("click", (e) => { e.stopPropagation(); setPanel(!panelOpen); });
     launcherBtn.addEventListener("mousedown", (e) => e.stopPropagation());
   }
-  // Prime's markup uses generated class names, so find the button by its accessible label.
+  // The site's markup uses generated class names, so find the button by its accessible label.
   function findCaptionButton() {
     const scope = SITE.name === "disney" ? document : playerEl() || document;
     const pr = (playerEl() || document.documentElement).getBoundingClientRect();
@@ -370,7 +389,7 @@
       const hit = deepAll(SITE.capSel, scope).find(ok);
       if (hit) return hit;
     }
-    // otherwise find it by its accessible label (Prime's markup uses generated class names)
+    // otherwise find it by its accessible label (The site's markup uses generated class names)
     return deepAll("button, [role=button]", scope).find((b) => {
       const label = (b.getAttribute("aria-label") || "") + " " + (b.getAttribute("title") || "") + " " + (b.getAttribute("data-tooltip-title") || "");
       return SITE.capLabel.test(label) && ok(b);
@@ -403,10 +422,10 @@
       btnPlaced = "inline";
       return;
     }
-    // No caption button right now. If we have seen it before, Prime has hidden its controls: hide ours too.
+    // No caption button right now. If we have seen it before, the site has hidden its controls: hide ours too.
     if (capSeen && SITE.name !== "disney") { btnHost.remove(); btnPlaced = "hidden"; return; }
     // Never found (the page labels it differently): float it, but only while the controls would be showing
-    // (mouse moved recently, or playback is paused), like Prime's own controls.
+    // (mouse moved recently, or playback is paused), like the site's own controls.
     const v = getVideo();
     const controlsUp = Date.now() - lastMouse < 3000 || (v && v.paused);
     const parent = document.fullscreenElement || document.body;
@@ -425,9 +444,8 @@
       shrinkStyle = document.createElement("style");
       (document.head || document.documentElement).append(nativeStyle, shrinkStyle);
     }
-    nativeStyle.textContent = S.enabled && uiOn && S.hideNative && hasCues
-      ? SITE.nativeHide + "{visibility:hidden !important}"
-      : "";
+    nativeStyle.textContent = nativeCss();
+    syncShadowStyles(nativeCss());
     // Best effort: shrink the picture to leave room for the bar below it.
     shrinkStyle.textContent = S.enabled && uiOn && SITE.shrink && S.subPos === "below" && hasCues
       ? "video,.atvwebplayersdk-video-surface{height:calc(100% - 18%) !important}"
@@ -594,6 +612,7 @@
   }
 
   // ---------- main loop ----------
+  let lastShadowSync = 0;
   let shown = null, prevActive = -1, lastActRow = -1, lastStatus = 0;
   addEventListener("mousemove", () => { lastMouse = Date.now(); }, { passive: true, capture: true });
 
@@ -602,7 +621,7 @@
     ensureUI();
     if (statusEl && Date.now() - lastStatus > 800) { statusEl.textContent = statusText(); lastStatus = Date.now(); }
     if (cues.length) {
-      // The subtitles belong to one page. Prime may swap its <video> element during playback, so re-bind to
+      // The subtitles belong to one page. the site may swap its <video> element during playback, so re-bind to
       // the live one while the player is open instead of treating that as "player closed".
       const samePage = SITE.pageKey() === cuePath;
       const live = samePage ? playerVideo() : null;
@@ -618,6 +637,7 @@
       setUiOn(true);
     }
     syncHostBox();
+    if (SITE.name === "disney" && Date.now() - lastShadowSync > 1500) { lastShadowSync = Date.now(); syncShadowStyles(nativeCss()); }
     if (SITE.adShowing()) { subBox.style.display = "none"; placeLauncher(false); return; }   // YouTube ads reuse the <video>
     const v = getVideo();
     const present = !!v && (cues.length > 0 || !!playerEl());

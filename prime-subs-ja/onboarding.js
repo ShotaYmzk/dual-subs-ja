@@ -53,6 +53,9 @@ $("useOllama").onclick = async () => {
   $("ollamaMsg").textContent = v.ok ? "Ollama v" + v.version + " につながりました。モデルは設定で選べます。" : "Ollama につながりません: " + v.error;
 };
 $("open").onclick = () => chrome.tabs.create({ url: "https://www.amazon.co.jp/gp/video/storefront" });
+$("openNf").onclick = () => chrome.tabs.create({ url: "https://www.netflix.com/" });
+$("openDp").onclick = () => chrome.tabs.create({ url: "https://www.disneyplus.com/ja-jp/home" });
+$("openYt").onclick = () => chrome.tabs.create({ url: "https://www.youtube.com/" });
 $("settings").onclick = () => chrome.runtime.openOptionsPage();
 $("close").onclick = () => window.close();
 envCheck(); renderModels();

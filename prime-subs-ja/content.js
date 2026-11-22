@@ -227,12 +227,24 @@
   // Disney+: the player's timeline can differ from the subtitle file's (logo/pre-roll), so we learn the
 // difference by matching the native caption that is on screen with our cue list.
 let autoOff = 0, lastNative = "";
+const syncLog = [];
+function logSync(kind, v, txt) {
+  try {
+    const m = [];
+    if (txt) for (let k = 0; k < cues.length && m.length < 4; k++) { const c = norm(enLine(k)); if (c && (c === txt || c.includes(txt) || txt.includes(c))) m.push(cues[k].begin); }
+    syncLog.push({ kind, ct: Math.round(v.currentTime * 100) / 100, wall: new Date().toISOString().slice(11, 19), native: (txt || "").slice(0, 50), matches: m, autoOff: Math.round(autoOff * 100) / 100, paused: v.paused });
+    if (syncLog.length > 80) syncLog.shift();
+  } catch (e) {}
+}
+let lastBeat = 0;
 const norm = (x) => (x || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9fff]+/g, " ").trim();
 function autoSync(v) {
   let txt = "";
   try { txt = norm(deepAll(SITE.nativeText).map((e) => e.textContent).join(" ")); } catch (e) {}
+  if (Date.now() - lastBeat > 4000) { lastBeat = Date.now(); logSync("beat", v, txt); }
   if (txt === lastNative) return;
   const fresh = !lastNative; lastNative = txt;
+  logSync("native", v, txt);
   if (!txt || !fresh || v.paused) return;      // only when a caption has just appeared
   let best = null;
   for (let k = 0; k < cues.length; k++) {
@@ -619,7 +631,12 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
       cues: { n: cues.length, src: srcLang, translated: tr.filter((x) => x != null).length, first: cues[0] && [cues[0].begin, cues[0].end], last: cues.length && [cues[cues.length - 1].begin, cues[cues.length - 1].end] },
       ui: { uiOn, panelOpen, launcher: btnPlaced, captionButtonFound: !!findCaptionButton(), playerContainer: !!playerEl() },
       hook: hookStats, videos: vids, nativeCaptionCandidates: nativeCaptionCandidates(),
-      autoOff, settings: S
+      autoOff, syncLog,
+      nativeNow: (() => { try { return deepAll(SITE.nativeText).map((e) => e.textContent).join(" | ").slice(0, 120); } catch (e) { return null; } })(),
+      textTracks: deepAll("video").map((v) => Array.from(v.textTracks || []).map((t) => ({ kind: t.kind, label: t.label, lang: t.language, mode: t.mode, cues: t.cues ? t.cues.length : null, first: t.cues && t.cues.length ? [t.cues[0].startTime, String(t.cues[0].text).slice(0, 40)] : null }))),
+      ranges: deepAll("video").map((v) => ({ buffered: Array.from({ length: v.buffered.length }, (_, i) => [v.buffered.start(i), v.buffered.end(i)]), played: Array.from({ length: v.played.length }, (_, i) => [v.played.start(i), v.played.end(i)]), seekable: Array.from({ length: v.seekable.length }, (_, i) => [v.seekable.start(i), v.seekable.end(i)]), duration: String(v.duration), rate: v.playbackRate })),
+      firstCues: cues.slice(0, 12).map((c) => [c.begin, c.end, (enOf(cues.indexOf(c)) || "").slice(0, 30)]),
+      settings: S
     };
   }
   async function copyDiag() {

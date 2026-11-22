@@ -224,12 +224,32 @@
     if (f && !f.paused && f !== cueVideo && isShown(f)) cueVideo = f;
     return cueVideo && isShown(cueVideo) ? cueVideo : f;
   };
-  const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.offset : null; };
+  // Disney+: the player's timeline can differ from the subtitle file's (logo/pre-roll), so we learn the
+// difference by matching the native caption that is on screen with our cue list.
+let autoOff = 0, lastNative = "";
+const norm = (x) => (x || "").toLowerCase().replace(/<[^>]*>/g, "").replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9fff]+/g, " ").trim();
+function autoSync(v) {
+  let txt = "";
+  try { txt = norm(deepAll(SITE.nativeText).map((e) => e.textContent).join(" ")); } catch (e) {}
+  if (txt === lastNative) return;
+  const fresh = !lastNative; lastNative = txt;
+  if (!txt || !fresh || v.paused) return;      // only when a caption has just appeared
+  let best = null;
+  for (let k = 0; k < cues.length; k++) {
+    const c = norm(enLine(k));
+    if (!c || (c !== txt && !c.includes(txt) && !txt.includes(c))) continue;
+    const d = v.currentTime - cues[k].begin;
+    if (d < -5 || d > 120) continue;            // native cue appears right at its start: d should be the offset
+    if (!best || Math.abs(d - autoOff) < Math.abs(best - autoOff)) best = d;
+  }
+  if (best != null && Math.abs(best - autoOff) > 0.4) autoOff = best;
+}
+const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.offset - autoOff : null; };
   let lastSeek = 0;
   function seekTo(i, play) {
     const v = getVideo();
     if (!v || !cues[i]) return;
-    v.currentTime = cues[i].begin + S.offset;
+    v.currentTime = cues[i].begin + S.offset + autoOff;
     if (play && v.paused) v.play().catch(() => {});
     lastSeek = Date.now();
   }
@@ -599,7 +619,7 @@
       cues: { n: cues.length, src: srcLang, translated: tr.filter((x) => x != null).length, first: cues[0] && [cues[0].begin, cues[0].end], last: cues.length && [cues[cues.length - 1].begin, cues[cues.length - 1].end] },
       ui: { uiOn, panelOpen, launcher: btnPlaced, captionButtonFound: !!findCaptionButton(), playerContainer: !!playerEl() },
       hook: hookStats, videos: vids, nativeCaptionCandidates: nativeCaptionCandidates(),
-      settings: S
+      autoOff, settings: S
     };
   }
   async function copyDiag() {
@@ -612,6 +632,7 @@
   // ---------- leaving the player ----------
   function setUiOn(on) { if (uiOn !== on) { uiOn = on; applySettings(); } }
   function resetState() {
+    autoOff = 0; lastNative = "";
     cues = []; tr = []; cueKey = ""; cueVideo = null; runId++;
     panelOpen = false;
     if (panel) { panel.classList.remove("open"); subBox.classList.remove("open"); }
@@ -652,7 +673,8 @@
     const present = !!v && (cues.length > 0 || !!playerEl());
     placeLauncher(S.enabled && present, cues.length === 0 || !!lastError);   // orange while no subtitle file has been captured
     if (!S.enabled || !v) { subBox.style.display = "none"; return; }
-    const t = v.currentTime - S.offset;
+    if (SITE.name === "disney") autoSync(v);
+    const t = v.currentTime - S.offset - autoOff;
     subBox.classList.toggle("lift", S.subPos === "below" && Date.now() - lastMouse < 2800);
 
     let enText = "", jaText = "", act = -1;

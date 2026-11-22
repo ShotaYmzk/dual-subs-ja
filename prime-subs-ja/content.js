@@ -26,8 +26,28 @@
       adShowing: () => { const p = document.getElementById("movie_player"); return !!(p && p.classList.contains("ad-showing")); }
     }
   };
-  const SITE = /(^|\.)netflix\.com$/.test(HOST) ? SITES.netflix : /(^|\.)youtube\.com$/.test(HOST) ? SITES.youtube : SITES.prime;
-  const playerEl = () => document.querySelector(SITE.playerSel);
+  SITES.disney = {
+    name: "disney", playerSel: "disney-web-player,.btm-media-client-element,[class*='btm-media-overlays']", zone: "bottom",
+    capSel: "[data-testid='audio-subtitle-button'],[data-testid*='audio-subtitle' i],[data-testid*='audioSubtitle' i],[data-testid*='caption' i],[data-gv2elementkey*='subtitle' i],[data-testid*='subtitle'],[data-gv2elementkey*='audioSubtitle']", capLabel: /音声と字幕|字幕|audio ?(&|and) ?subtitles|subtitles|captions/i,
+    nativeHide: ".dss-subtitle-renderer-wrapper,.dss-subtitle-renderer-cue,[class*='dss-subtitle-renderer']",
+    nativeText: ".dss-subtitle-renderer-cue", shrink: false,
+    pageKey: () => location.pathname, adShowing: () => false
+  };
+  const SITE = /(^|\.)disneyplus\.com$/.test(HOST) ? SITES.disney : /(^|\.)netflix\.com$/.test(HOST) ? SITES.netflix : /(^|\.)youtube\.com$/.test(HOST) ? SITES.youtube : SITES.prime;
+  // Disney custom elements can nest the video and controls in open shadow roots.
+  function deepAll(selector, scope = document) {
+    const out = [...scope.querySelectorAll(selector)];
+    if (SITE.name === "disney") {
+      for (const el of scope.querySelectorAll("*")) {
+        if (el.id && el.id.startsWith("primesubs-ja")) continue;
+        if (el.shadowRoot) out.push(...deepAll(selector, el.shadowRoot));
+      }
+    }
+    return out;
+  }
+  const playerEl = () => deepAll(SITE.playerSel).find((el) => SITE.name !== "disney" || isShown(el)) ||
+    (SITE.name === "disney" && /\/play\//.test(location.pathname)
+      ? deepAll("video").find(isShown) : null);
 
   const S = {
     enabled: true, hideNative: true, showEn: true, showJa: true,
@@ -161,7 +181,7 @@
 
   // ---------- video ----------
   function findVideo() {
-    const vs = [...document.querySelectorAll("video")].filter((v) => v.readyState > 0);
+    const vs = deepAll("video").filter((v) => v.readyState > 0);
     vs.sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight);
     return vs[0] || null;
   }
@@ -338,7 +358,7 @@
   }
   // Prime's markup uses generated class names, so find the button by its accessible label.
   function findCaptionButton() {
-    const scope = playerEl() || document;
+    const scope = SITE.name === "disney" ? document : playerEl() || document;
     const pr = (playerEl() || document.documentElement).getBoundingClientRect();
     const inZone = (rc) => pr.height < 50 || (SITE.zone === "top" ? rc.top < pr.top + pr.height * 0.4 : rc.top > pr.top + pr.height * 0.6);   // no usable player box: do not filter
     const ok = (b) => {
@@ -347,11 +367,11 @@
       return rc.width > 16 && rc.width < 140 && inZone(rc);
     };
     if (SITE.capSel) {
-      const hit = [...scope.querySelectorAll(SITE.capSel)].find(ok);
+      const hit = deepAll(SITE.capSel, scope).find(ok);
       if (hit) return hit;
     }
     // otherwise find it by its accessible label (Prime's markup uses generated class names)
-    return [...scope.querySelectorAll("button, [role=button]")].find((b) => {
+    return deepAll("button, [role=button]", scope).find((b) => {
       const label = (b.getAttribute("aria-label") || "") + " " + (b.getAttribute("title") || "") + " " + (b.getAttribute("data-tooltip-title") || "");
       return SITE.capLabel.test(label) && ok(b);
     }) || null;
@@ -384,7 +404,7 @@
       return;
     }
     // No caption button right now. If we have seen it before, Prime has hidden its controls: hide ours too.
-    if (capSeen) { btnHost.remove(); btnPlaced = "hidden"; return; }
+    if (capSeen && SITE.name !== "disney") { btnHost.remove(); btnPlaced = "hidden"; return; }
     // Never found (the page labels it differently): float it, but only while the controls would be showing
     // (mouse moved recently, or playback is paused), like Prime's own controls.
     const v = getVideo();
@@ -496,7 +516,7 @@
   const domCache = new Map();
   let domBusy = false;
   async function domFallback() {
-    const els = [...document.querySelectorAll(SITE.nativeText)];
+    const els = deepAll(SITE.nativeText);
     const text = els.map((n) => n.innerText).join(" ").trim();
     if (!text || !/[A-Za-z]/.test(text)) return "";
     if (domCache.has(text)) return domCache.get(text);
@@ -546,7 +566,7 @@
     return out;
   }
   function diagnostics() {
-    const vids = [...document.querySelectorAll("video")].map((v) => ({ ready: v.readyState, w: Math.round(v.getBoundingClientRect().width), h: Math.round(v.getBoundingClientRect().height), paused: v.paused, t: Math.round(v.currentTime) }));
+    const vids = deepAll("video").map((v) => ({ ready: v.readyState, w: Math.round(v.getBoundingClientRect().width), h: Math.round(v.getBoundingClientRect().height), paused: v.paused, t: Math.round(v.currentTime) }));
     return {
       version: chrome.runtime.getManifest().version, path: location.pathname,
       cues: { n: cues.length, src: srcLang, translated: tr.filter((x) => x != null).length, first: cues[0] && [cues[0].begin, cues[0].end], last: cues.length && [cues[cues.length - 1].begin, cues[cues.length - 1].end] },

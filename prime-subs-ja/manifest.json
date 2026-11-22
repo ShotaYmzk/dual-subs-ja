@@ -36,7 +36,8 @@
         "*://*.amazon.com/gp/video/*",
         "*://*.amazon.com/-/*/gp/video/*",
         "*://*.netflix.com/*",
-        "*://www.youtube.com/*"
+        "*://www.youtube.com/*",
+        "*://*.disneyplus.com/*"
       ],
       "js": [
         "hook.js"
@@ -52,7 +53,8 @@
         "*://*.amazon.com/gp/video/*",
         "*://*.amazon.com/-/*/gp/video/*",
         "*://*.netflix.com/*",
-        "*://www.youtube.com/*"
+        "*://www.youtube.com/*",
+        "*://*.disneyplus.com/*"
       ],
       "js": [
         "ttml.js",

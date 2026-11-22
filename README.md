@@ -1,11 +1,26 @@
 # Dual Subs JA (PLaMo)
 
-Prime Video・Netflix・YouTube の英語字幕の下に、日本語の訳を添える Chrome 拡張機能です。
+<p align="center"><img src="store/promo/banner-ogp-1200x630.png" alt="Dual Subs JA: 英語字幕の下に日本語訳" width="720"></p>
+
+Prime Video・Netflix・YouTube・Disney+ の英語字幕の下に、日本語の訳を添える Chrome 拡張機能です。
 翻訳は [PLaMo 3 Translate](https://huggingface.co/collections/pfnet/plamo-3-translate) を**あなたのPCの中**（WebGPU / CPU）で動かすので、字幕は外部に送信されません。
 
 *Adds Japanese next to the English subtitles of Prime Video, Netflix and YouTube. Translation runs on your own device with PLaMo 3 Translate; subtitles never leave your computer.*
 
 > 非公式です。Preferred Networks, Inc. および Amazon とは関係ありません。Built with PLaMo.
+
+## スクリーンショット
+
+<table>
+<tr>
+<td width="50%"><img src="store/images/screenshot-1-dual-subtitles-1280x800.png" alt="英語字幕と日本語訳の対訳表示"><br><sub>映像に重ねて対訳表示</sub></td>
+<td width="50%"><img src="store/images/screenshot-4-bottom-bar-1280x800.png" alt="画面下の帯に表示"><br><sub>画面の下の帯に表示</sub></td>
+</tr>
+<tr>
+<td><img src="store/images/screenshot-2-settings-1280x800.png" alt="設定画面"><br><sub>設定画面</sub></td>
+<td><img src="store/images/screenshot-3-setup-1280x800.png" alt="初回セットアップ"><br><sub>初回セットアップ（モデル取得）</sub></td>
+</tr>
+</table>
 
 ## 機能
 - 字幕を先読みして翻訳（再生位置から先のセリフを順に）
@@ -15,7 +30,7 @@ Prime Video・Netflix・YouTube の英語字幕の下に、日本語の訳を添
 - 英語字幕がない作品は、日本語字幕を英語に翻訳して対訳表示
 - 用語集（固有名詞の訳を固定）
 - ブラウザ内蔵エンジン（追加インストール不要）／ 上級者向けに Ollama も選べます
-- 対応サイト: Prime Video / Netflix / YouTube（Netflix は実機での確認がまだです）
+- 対応サイト: Prime Video / Netflix / YouTube / Disney+（Netflix・Disney+ は実機での確認がまだです）
 
 ## インストール（ソースから）
 1. このリポジトリを clone する（`prime-subs-ja/vendor/wllama/` のビルド済みファイルを含みます）

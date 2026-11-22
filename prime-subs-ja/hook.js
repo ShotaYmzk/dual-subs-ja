@@ -2,6 +2,7 @@
 // data and forwards the text to the isolated content script. Site-specific parts:
 //   Prime Video : TTML / WebVTT files, and the JSON that lists the subtitle tracks
 //   Netflix     : the (decrypted) playback manifest -> pick a track -> fetch its WebVTT / TTML
+//   Disney+     : HLS master playlist -> English subtitle playlist -> WebVTT segments, joined
 //   YouTube     : the player's own /api/timedtext responses (json3 / XML), optionally switching captions on
 (function () {
   if (window.__primeSubsJaHooked) return;
@@ -11,6 +12,7 @@
   const HOST = location.hostname;
   const IS_NETFLIX = /(^|\.)netflix\.com$/.test(HOST);
   const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
+  const IS_DISNEY = /(^|\.)disneyplus\.com$/.test(HOST);
   const seen = new Set();
   const post = (msg) => window.postMessage({ source: TAG, ...msg }, "*");
 
@@ -21,9 +23,28 @@
   });
 
   const ytCaptured = [];                     // language of every YouTube caption response seen
-  const stats = { site: IS_NETFLIX ? "netflix" : IS_YOUTUBE ? "youtube" : "prime", scanned: 0, found: 0, recent: [] };
+  const stats = { site: IS_NETFLIX ? "netflix" : IS_YOUTUBE ? "youtube" : IS_DISNEY ? "disney" : "prime", scanned: 0, found: 0, recent: [], disney: { paths: [], errors: [] } };
   let lastStat = 0;
   const pathOnly = (u) => { try { const x = new URL(u, location.href); return x.host + x.pathname.replace(/[A-Za-z0-9_-]{24,}/g, "…"); } catch { return String(u).slice(0, 60); } };
+  function noteDisney(url, ct, state) {
+    if (!IS_DISNEY) return;
+    const where = pathOnly(url);
+    const paths = stats.disney.paths;
+    const old = paths.find((x) => x.where === where);
+    if (old) { old.state = state; old.contentType = ct; }
+    else { paths.push({ where, contentType: ct, state }); if (paths.length > 80) paths.shift(); }
+    postStats(false);
+  }
+  function disneyError(url, error) {
+    stats.disney.errors.push({ where: pathOnly(url), error: String(error).slice(0, 160) });
+    if (stats.disney.errors.length > 12) stats.disney.errors.shift();
+    postStats(true);
+  }
+  // HLS also uses audio/mpegurl and video/* MIME types; test text formats first.
+  function readable(url, ct) {
+    if (/mpegurl|vtt|ttml|json|text\//i.test(ct) || /\.(m3u8|vtt|webvtt|ttml|dfxp)(?:[?#]|$)/i.test(url)) return true;
+    return !/^(?:video|audio|image|font)\//i.test(ct) && !/octet-stream/i.test(ct);
+  }
   function postStats(force) {
     const now = Date.now();
     if (!force && now - lastStat < 1000) return;
@@ -60,8 +81,11 @@
   // ---------- generic response inspection ----------
   function inspect(url, ctype, text, hint) {
     stats.scanned++;
+    noteDisney(url, ctype, "inspected");
     let kind = "other";
     const lang = (hint && hint.lang) || "";
+    // Normalize a BOM before recognizing playlist and subtitle signatures.
+    if (typeof text === "string") text = text.replace(/^\uFEFF/, "");
     if (typeof text === "string" && text.length > 20) {
       if (IS_YOUTUBE && /\/api\/timedtext/.test(url)) {
         const q = (() => { try { return new URL(url, location.href).searchParams; } catch { return new URLSearchParams(); } })();
@@ -71,7 +95,8 @@
         post({ type: "yt", url, text, lang: ylang, asr: q.get("kind") === "asr" });
       } else if (/^\s*WEBVTT/.test(text)) { kind = "vtt"; post({ type: "vtt", url, text, lang }); }
       else if (/<tt[\s>]/.test(text.slice(0, 2000)) && /<p[\s>]/.test(text)) { kind = "ttml"; post({ type: "ttml", url, text, lang }); }
-      else if (!IS_NETFLIX && !IS_YOUTUBE && (/json/i.test(ctype || "") || /^\s*[{\[]/.test(text.slice(0, 5)))) { if (scanJSON(text)) kind = "subtitle-list"; }
+      else if (IS_DISNEY && /^\s*#EXTM3U/.test(text)) { if (disneyPlaylist(url, text)) kind = "hls"; }
+      else if (!IS_NETFLIX && !IS_YOUTUBE && (/json/i.test(ctype || "") || /^\s*[{\[]/.test(text.slice(0, 5)))) { if (IS_DISNEY ? disneyJSON(url, text) : scanJSON(text)) kind = "subtitle-list"; }
     }
     if (kind !== "other") {
       stats.found++;
@@ -126,6 +151,105 @@
     }
   }
 
+  // ---------- Disney+ ----------
+  // Streams over HLS. The master playlist lists subtitle renditions (#EXT-X-MEDIA TYPE=SUBTITLES); each is a
+  // media playlist of WebVTT segments. Pick English (else Japanese), fetch every segment, join them into one VTT.
+  // JSON manifests vary by client. Only follow text tracks or explicit HLS URLs.
+  function disneyJSON(base, text) {
+    let data; try { data = JSON.parse(text); } catch { return false; }
+    const tracks = [];
+    function walk(o, context = "", lang = "", depth = 0) {
+      if (!o || typeof o !== "object" || depth > 16) return;
+      const language = o.languageCode || o.language || o.lang || lang;
+      const ctx = context + " " + [o.type, o.kind, o.format].filter(Boolean).join(" ");
+      for (const [k, v] of Object.entries(o)) {
+        if (typeof v === "string" && /^(https?:|\.?\.?\/)/.test(v) &&
+          (/\.(m3u8|vtt|ttml|dfxp)(?:[?#]|$)/i.test(v) || (/subtitle|caption|timedtext/i.test(ctx) && /url|uri|href/i.test(k)))) {
+          if (!/forced/i.test(ctx) && (!language || /^(en|ja)(?:-|$)/i.test(language))) {
+            try { tracks.push({ url: new URL(v, base).href, lang: typeof language === "string" ? language : "" }); } catch {}
+          }
+        } else if (v && typeof v === "object") walk(v, ctx + " " + k, language, depth + 1);
+      }
+    }
+    walk(data);
+    const en = tracks.filter((t) => /^en/i.test(t.lang));
+    for (const t of en.length ? en : tracks) disneyLoad(t.url, t.lang);
+    return tracks.length > 0;
+  }
+  function disneyLoad(url, lang) {
+    if (seen.has(url)) return;
+    seen.add(url);
+    disneyFetch(url, lang).catch((e) => { seen.delete(url); disneyError(url, e); });
+  }
+  function disneyPlaylist(url, text) {
+    if (!/#EXT-X-MEDIA:[^\n]*TYPE=SUBTITLES/.test(text)) {
+      // A player may request only the subtitle media playlist, without a master.
+      if (/#EXTINF:/.test(text) && /(?:\.vtt(?:[?\s]|$)|subtitle|caption|timedtext)/i.test(text + "\n" + url)) {
+        disneyLoad(url, ""); return true;
+      }
+      return false;
+    }
+    const attr = (line, k) => { const m = line.match(new RegExp("(?:^|[,:])" + k + '=(?:"([^"]*)"|([^,]*))')); return m ? (m[1] != null ? m[1] : m[2]) : ""; };
+    const subs = text.split(/\r?\n/).filter((l) => /^#EXT-X-MEDIA:/.test(l) && attr(l, "TYPE") === "SUBTITLES" && attr(l, "URI") && !/^YES$/i.test(attr(l, "FORCED")))
+      .map((l) => ({ lang: attr(l, "LANGUAGE"), sdh: /describes-(music|spoken)/.test(attr(l, "CHARACTERISTICS")), uri: attr(l, "URI") }));
+    const byLang = (re) => subs.filter((x) => re.test(x.lang)).sort((a, b) => a.sdh - b.sdh)[0];
+    const pick = byLang(/^en/i) || byLang(/^ja/i);
+    if (!pick) return false;
+    let pl;
+    try { pl = new URL(pick.uri, url).href; } catch { return false; }
+    disneyLoad(pl, pick.lang);
+    return true;
+  }
+  async function disneyFetch(plUrl, lang) {
+    const read = async (url) => {
+      const r = await origFetch(url);
+      noteDisney(r.url || url, r.headers.get("content-type") || "", "subtitle-fetch");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return { text: await r.text(), url: r.url || url };
+    };
+    const response = await read(plUrl);
+    plUrl = response.url;
+    const txt = response.text;
+    if (!/^\s*#EXTM3U/.test(txt)) { inspect(plUrl, "", txt, { lang }); return; }
+    if (/#EXT-X-MEDIA:/.test(txt)) { disneyPlaylist(plUrl, txt); return; }
+    const lines = txt.split(/\r?\n/);
+    const segs = [];
+    let dur = 0, at = 0;
+    for (const l of lines) {
+      const m = l.match(/^#EXTINF:([\d.]+)/);
+      if (m) { dur = parseFloat(m[1]) || 0; continue; }
+      if (!l || l[0] === "#") continue;
+      segs.push({ url: new URL(l.trim(), plUrl).href, start: at });
+      at += dur; dur = 0;
+    }
+    if (!segs.length) return;
+    const bodies = await Promise.all(segs.map((sg) => read(sg.url).then((r) => r.text).catch((e) => { disneyError(sg.url, e); return ""; })));
+    const ts = (s) => { const m = s.match(/(?:(\d+):)?(\d+):(\d+)[.,](\d+)/); return m ? (+(m[1] || 0)) * 3600 + +m[2] * 60 + +m[3] + +("0." + m[4]) : 0; };
+    const fmt = (t) => { const h = Math.floor(t / 3600), mi = Math.floor(t / 60) % 60, s = t % 60; return String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0") + ":" + s.toFixed(3).padStart(6, "0"); };
+    const out = ["WEBVTT", ""];
+    segs.forEach((sg, i) => {
+      const body = bodies[i] || "";
+      const first = body.match(/(\S+)\s+-->/);
+      // Absolute cue times must not be shifted merely because a cue overlaps a boundary.
+      // Use the explicit MPEG timestamp mapping when present, relative to the first segment.
+      const mapping = (b) => {
+        const line = (b.match(/X-TIMESTAMP-MAP[^\r\n]*/) || [""])[0];
+        const local = line.match(/LOCAL:([\d:.]+)/), mpeg = line.match(/MPEGTS:(\d+)/);
+        return local && mpeg ? +mpeg[1] / 90000 - ts(local[1]) : null;
+      };
+      const base = mapping(bodies[0] || ""), current = mapping(body);
+      const shift = base != null && current != null ? current - base :
+        (i > 0 && first && ts(first[1]) < 1 && sg.start > 1 ? sg.start : 0);
+      for (const block of body.replace(/\r/g, "").split(/\n{2,}/)) {
+        const ls = block.split("\n"), k = ls.findIndex((x) => x.includes("-->"));
+        if (k < 0) continue;
+        const [a, b] = ls[k].split("-->");
+        out.push(fmt(ts(a) + shift) + " --> " + fmt(ts(b.trim().split(/\s/)[0]) + shift), ...ls.slice(k + 1), "");
+      }
+    });
+    inspect(plUrl, "", out.join("\n"), { lang });
+  }
+
   // ---------- YouTube ----------
   // Captions are only requested while they are on. Switch them on (English first, then Japanese) so the
   // translation does not depend on the viewer having pressed CC.
@@ -171,8 +295,11 @@
       p.then((res) => {
         try {
           const ct = res.headers.get("content-type") || "";
-          if (/video|audio|octet-stream|image|font/i.test(ct)) return;
-          res.clone().text().then((t) => inspect(res.url || url, ct, t)).catch(() => {});
+          const responseUrl = res.url || url;
+          const canRead = readable(responseUrl, ct);
+          noteDisney(responseUrl, ct, canRead ? "reading" : "skipped-binary");
+          if (!canRead) return;
+          res.clone().text().then((t) => inspect(responseUrl, ct, t)).catch((e) => { if (IS_DISNEY) disneyError(responseUrl, e); });
         } catch {}
       }).catch(() => {});
     } catch {}
@@ -189,10 +316,15 @@
     this.addEventListener("load", function () {
       try {
         const rt = this.responseType;
-        if (rt && rt !== "text") return;
         const ct = this.getResponseHeader("content-type") || "";
-        if (/video|audio|octet-stream|image|font/i.test(ct)) return;
-        inspect(this.responseURL || this.__psUrl, ct, this.responseText);
+        const url = this.responseURL || this.__psUrl;
+        const canRead = readable(url, ct);
+        noteDisney(url, ct, canRead ? "xhr-" + (rt || "text") : "skipped-binary");
+        if (!canRead) return;
+        if (!rt || rt === "text") inspect(url, ct, this.responseText);
+        else if (rt === "json") inspect(url, ct, JSON.stringify(this.response));
+        else if (IS_DISNEY && rt === "arraybuffer") inspect(url, ct, new TextDecoder().decode(this.response));
+        else if (IS_DISNEY && rt === "blob") this.response.text().then((t) => inspect(url, ct, t)).catch((e) => disneyError(url, e));
       } catch {}
     });
     return XS.apply(this, arguments);

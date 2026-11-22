@@ -259,7 +259,16 @@ function nativeScan() {
 let synced = false;
 function autoSync(v) {
   // Disney+'s player timeline starts 20 s after the subtitle timeline (played.start = 20.0 when playing from the beginning).
-  if (!synced && autoOff === 0 && v.played.length && Math.abs(v.played.start(0) - 20) < 0.1 && v.currentTime > 20.5) autoOff = 20;
+  if (!synced && v.played.length && Math.abs(v.played.start(0) - 20) < 0.1 && v.currentTime > 20.5) {
+    // The programme starts 20 s into the player timeline; if the short Disney+ bumper ("/int/" asset) was inserted, it comes on top.
+    let base = 20;
+    try {
+      const d = hookStats && hookStats.disney;
+      const ip = d && (d.playlists || []).filter((x) => x.int && !/128/.test(x.w))[0];
+      if (d && (d.assets || []).some((a) => a.int) && ip) base += ip.dur;
+    } catch (e) {}
+    if (Math.abs(autoOff - base) > 0.05) autoOff = base;
+  }
   let txt = "";
   try { txt = norm(deepAll(SITE.nativeText).map((e) => e.textContent).join(" ")); } catch (e) {}
   if (Date.now() - lastBeat > 4000) { lastBeat = Date.now(); logSync("beat", v, txt); }
@@ -361,7 +370,7 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
         if (!r) return;
         if (e.shiftKey) {                      // "this line is what I hear right now" -> calibrate the offset
           const v = getVideo();
-          if (v) { autoOff = v.currentTime - S.offset - cues[+r.dataset.i].begin; lastSeek = Date.now(); logSync("manual", v, norm(enLine(+r.dataset.i))); }
+          if (v) { autoOff = v.currentTime - S.offset - cues[+r.dataset.i].begin; synced = true; lastSeek = Date.now(); logSync("manual", v, norm(enLine(+r.dataset.i))); }
           return;
         }
         seekTo(+r.dataset.i, true);

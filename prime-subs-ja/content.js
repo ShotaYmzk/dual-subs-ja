@@ -366,7 +366,8 @@
     svg{flex:none;display:block}
     button.on{background:#16181d;color:#ffd83d;box-shadow:0 0 0 2px #ffd83d}
     button.warn{background:#ff9f43}
-    :host(.float) button{position:fixed;top:14px;right:300px;transition:opacity .25s}
+    :host(.float) button{position:fixed;top:14px;right:300px;z-index:2147483647;transition:opacity .25s}
+    :host(.dp) button{top:84px;right:24px}
     :host(.hide) button{opacity:0;pointer-events:none}
     :host(.compact) button{height:30px;margin-right:6px;padding:0 11px 0 6px;font-size:13px}
   `;
@@ -420,7 +421,7 @@
     if (!btnHost) makeLauncher();
     launcherBtn.classList.toggle("warn", !!warn);
     if (!show) { btnHost.remove(); btnPlaced = ""; return; }
-    const cap = findCaptionButton();
+    const cap = SITE.name === "disney" ? null : findCaptionButton();   // Disney+ hides its controls in shadow DOM: always float
     if (cap) {
       capSeen = true;
       const slot = findRowSlot(cap);
@@ -438,6 +439,7 @@
     const parent = document.fullscreenElement || document.body;
     if (btnHost.parentElement !== parent) parent.appendChild(btnHost);
     btnHost.classList.add("float");
+    btnHost.classList.toggle("dp", SITE.name === "disney");
     btnHost.classList.toggle("hide", !controlsUp);
     btnPlaced = "float";
   }

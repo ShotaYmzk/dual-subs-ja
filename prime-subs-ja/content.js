@@ -128,7 +128,7 @@
     if (d.lang && !parsed.lang) parsed.lang = d.lang;
     if (!parsed.cues.length) return;
     // A tiny file next to a full one is a forced-narrative track (foreign-language lines only).
-    if (cues.length > 100 && parsed.cues.length < cues.length * 0.25) return;
+    if (cues.length > 100 && parsed.cues.length < cues.length * 0.25 && cuePath === SITE.pageKey()) return;
     // identity of a subtitle track: size, timing AND wording (two languages can share the exact same timing)
     const sample = parsed.cues.slice(0, 6).concat(parsed.cues.slice(-3)).map((c) => c.text).join("|");
     let hash = 0; for (let k = 0; k < sample.length; k++) hash = (hash * 31 + sample.charCodeAt(k)) | 0;
@@ -136,6 +136,7 @@
     if (key === cueKey) return;
     cueKey = key;
     cues = parsed.cues;
+    autoOff = 0; lastNative = ""; synced = false; manualCal = false; prevActive = -1;
     srcLang = detectLang(parsed.lang, cues);
     tr = new Array(cues.length).fill(null);
     runId++;
@@ -256,7 +257,7 @@ function nativeScan() {
   } catch (e) {}
   return out;
 }
-let synced = false;
+let synced = false, manualCal = false;
 function autoSync(v) {
   // Disney+'s player timeline starts 20 s after the subtitle timeline (played.start = 20.0 when playing from the beginning).
   if (!synced && v.played.length && Math.abs(v.played.start(0) - 20) < 0.1 && v.currentTime > 20.5) {
@@ -277,9 +278,9 @@ function autoSync(v) {
     if (!c || (c !== txt && !c.includes(txt) && !txt.includes(c))) continue;
     const d = v.currentTime - cues[k].begin;
     if (d < -5 || d > 120) continue;            // native cue appears right at its start: d should be the offset
-    if (!best || Math.abs(d - autoOff) < Math.abs(best - autoOff)) best = d;
+    if (best === null || Math.abs(d - autoOff) < Math.abs(best - autoOff)) best = d;
   }
-  if (best != null) {
+  if (best != null && !manualCal) {
     // Detection lag only ever makes the measured offset too big, so refine downwards on small differences and jump on big ones.
     if (!synced || Math.abs(best - autoOff) > 0.6) autoOff = best; else if (best < autoOff) autoOff = best;
     synced = true;
@@ -369,7 +370,7 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
         if (!r) return;
         if (e.shiftKey) {                      // "this line is what I hear right now" -> calibrate the offset
           const v = getVideo();
-          if (v) { autoOff = v.currentTime - S.offset - cues[+r.dataset.i].begin; synced = true; lastSeek = Date.now(); logSync("manual", v, norm(enLine(+r.dataset.i))); }
+          if (v) { autoOff = v.currentTime - S.offset - cues[+r.dataset.i].begin; synced = true; manualCal = true; lastSeek = Date.now(); logSync("manual", v, norm(enLine(+r.dataset.i))); }
           return;
         }
         seekTo(+r.dataset.i, true);
@@ -616,8 +617,8 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
     if (domCache.has(text)) return domCache.get(text);
     if (!domBusy) {
       domBusy = true;
-      const r = await chrome.runtime.sendMessage({ type: "translate", text, history: [], to: "ja" });
-      domBusy = false;
+      let r = null;
+      try { r = await chrome.runtime.sendMessage({ type: "translate", text, history: [], to: "ja" }); } catch (e) {} finally { domBusy = false; }
       if (r && r.ok) { domCache.set(text, r.ja); if (domCache.size > 200) domCache.delete(domCache.keys().next().value); }
     }
     return domCache.get(text) || "";
@@ -684,7 +685,7 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
   // ---------- leaving the player ----------
   function setUiOn(on) { if (uiOn !== on) { uiOn = on; applySettings(); } }
   function resetState() {
-    autoOff = 0; lastNative = ""; synced = false;
+    autoOff = 0; lastNative = ""; synced = false; manualCal = false;
     cues = []; tr = []; cueKey = ""; cueVideo = null; runId++;
     panelOpen = false;
     if (panel) { panel.classList.remove("open"); subBox.classList.remove("open"); }
@@ -741,7 +742,7 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
       jaText = actives.map((k) => jaLine(k)).filter(Boolean).join("\n");
 
       // auto-pause when the line that was playing has just ended (not after a seek)
-      if (S.autoPause && prevActive >= 0 && act !== prevActive && !v.paused && Date.now() - lastSeek > 700) {
+      if (S.autoPause && prevActive >= 0 && cues[prevActive] && act !== prevActive && !v.paused && Date.now() - lastSeek > 700) {
         const dt = t - cues[prevActive].end;
         if (dt >= -0.2 && dt < 0.8) v.pause();
       }
@@ -775,6 +776,8 @@ const videoTime = () => { const v = getVideo(); return v ? v.currentTime - S.off
   function teardown() {
     timers.forEach(clearInterval);
     for (const el of [host, btnHost, nativeStyle, shrinkStyle]) if (el) el.remove();
+    for (const st of shadowStyles.values()) st.remove();
+    shadowStyles.clear();
     runId++;
   }
   document.addEventListener("fullscreenchange", () => { host && ensureUI(); btnHost && btnHost.remove(); });

@@ -330,6 +330,8 @@
     return XO.apply(this, arguments);
   };
   XMLHttpRequest.prototype.send = function () {
+    if (this.__psL) return XS.apply(this, arguments);
+    this.__psL = true;
     this.addEventListener("load", function () {
       try {
         const rt = this.responseType;
